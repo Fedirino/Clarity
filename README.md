@@ -11,16 +11,33 @@ Open it in a browser to run it.
 
 ## How to run
 
-- **Quick look:** double-click `index.html`.
-  Note: opening as a local `file://` page blocks the AI features (the browser's
-  origin is "null" and Anthropic's API rejects it). Chemistry, History and
-  Schedule still work offline.
-- **Full features (chat + strip scan):** serve it over `https://`. Easiest is
-  Netlify — rename `index.html` and drag the folder onto app.netlify.com's
-  "Deploy manually" drop zone, then open the URL.
-- **Turn on AI:** tap the ⚙ button → paste an Anthropic API key (starts with
-  `sk-ant-...`). It's stored only in that browser's localStorage. Add it again
-  per device/browser.
+- **Quick look (offline):** double-click `index.html`.
+  Chemistry, History and Schedule work offline. Chat and strip scanning require
+  the Netlify deployment below.
+
+- **Full features (chat + strip scan):** deploy to Netlify:
+  1. Push this folder to a GitHub repo, or drag the folder onto
+     [app.netlify.com](https://app.netlify.com)'s "Deploy manually" drop zone.
+  2. In the Netlify dashboard go to **Site settings → Environment variables →
+     Add a variable**:
+     - Key: `ANTHROPIC_API_KEY`
+     - Value: your key (`sk-ant-…`)
+  3. Trigger a redeploy (Deploys → Trigger deploy) so the function picks up the
+     new variable.
+  4. Open the site URL — chat and scanning should work immediately.
+
+  The API key lives only on Netlify's server. Anyone you share the URL with can
+  use the app without seeing or needing the key.
+
+### File structure
+
+```
+index.html                     ← the full app
+netlify/functions/claude.js    ← serverless proxy (keeps API key safe)
+old-v1.2.0.html                ← archived previous version
+README.md
+CHANGELOG.md
+```
 
 ---
 
@@ -59,8 +76,9 @@ Open it in a browser to run it.
 ## Data & storage
 
 All state is in browser `localStorage` under `clarity-*` keys: `gallons`,
-`key` (API key), `history`, `tasks`, `calibration`. Nothing leaves the device
-except the direct calls to the Anthropic API.
+`history`, `tasks`, `calibration`, `usage`. Nothing leaves the device except
+the API calls routed through the Netlify serverless function. The API key is
+stored only as a Netlify environment variable.
 
 ---
 
@@ -70,8 +88,8 @@ except the direct calls to the Anthropic API.
 - `doseAdvice(read, gal)` — deterministic dosing engine (chemical + amount + why).
 - `S` — the single app-state object; `persist()` saves it.
 - `render()` → `renderChat / renderChem / renderHistory / renderSchedule`.
-- `callClaude(body)` — POSTs directly to api.anthropic.com with the
-  `anthropic-dangerous-direct-browser-access` header.
+- `callClaude(body)` — POSTs to `/.netlify/functions/claude`, which proxies to
+  Anthropic. The API key is a server-side environment variable.
 - `scanStrip(file)` — compresses the image, sends it to vision, parses JSON.
 - `openCalibration()` / `renderCalUI()` — multi-photo calibration flow for
   strip reference cards; stores brand + color-to-value mapping.
