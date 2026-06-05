@@ -291,7 +291,6 @@ const store={
 };
 let S={
   gallons: store.get('gallons')||15000,
-  apiKey: store.get('key')||'',
   history: store.get('history')||[],
   tasks: store.get('tasks')||defaultTasks(),
   messages:[{role:'assistant',content:"Hi! I'm Clarity, your personal pool assistant. I can help with water chemistry, maintenance, troubleshooting and seasonal advice.\n\nTap 📷 to snap a test strip with your camera, or 📁 to upload a photo. You can also use the Chemistry tab to log readings and get exact dosing amounts."}],
@@ -309,7 +308,7 @@ function defaultTasks(){
     {id:7,t:'Inspect equipment & water level',freq:'Weekly',int:7,last:now-6*day,done:false},
   ];
 }
-function persist(){store.set('gallons',S.gallons);store.set('key',S.apiKey);store.set('history',S.history);store.set('tasks',S.tasks);}
+function persist(){store.set('gallons',S.gallons);store.set('history',S.history);store.set('tasks',S.tasks);}
 
 const $=id=>document.getElementById(id);
 const TABS=[['chat','Chat'],['chem','Chemistry'],['history','History'],['schedule','Schedule']];
@@ -335,13 +334,10 @@ function renderSetup(){
       <div class="lab">Pool size (gallons)</div>
       <div class="chips">${[8000,12000,15000,20000,25000,30000].map(g=>
         `<button class="chip ${S.gallons===g?'on':''}" data-g="${g}">${(g/1000)}k</button>`).join('')}</div>
-      <div class="lab">Anthropic API key — for chat &amp; strip scanning</div>
-      <input class="key" id="keyIn" type="password" placeholder="sk-ant-..." value="${S.apiKey}">
-      <div class="hint">Stored only in this browser, on this device. Needed for AI chat and the camera strip scan. Chemistry, History and Schedule work without it.</div>
+      <div class="hint">Dosing amounts scale to your pool size. Pick the closest match.</div>
       <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v1.1.0</div>
     </div>`;
   el.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{S.gallons=+c.dataset.g;persist();renderSetup();renderTabs();render()});
-  $('keyIn').onchange=e=>{S.apiKey=e.target.value.trim();persist();};
 }
 
 function render(){
@@ -571,18 +567,19 @@ function checkUsage(){
 }
 
 async function callClaude(body){
-  if(!S.apiKey)throw new Error('Add your Anthropic API key in ⚙ settings to use chat & scanning.');
   const now=Date.now();
   if(now-lastCallTime<COOLDOWN_MS)throw new Error('Please wait a moment before sending another message.');
   lastCallTime=now;
   checkUsage();
-  const resp=await fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',
-    headers:{'Content-Type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify(body),
-  });
-  const data=await resp.json();
-  if(data.error)throw new Error(data.error.message);
+  let resp;
+  try{resp=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});}
+  catch(e){throw new Error('Network error — check your connection.');}
+  const text=await resp.text();
+  if(!text)throw new Error(`Empty response from server (status ${resp.status}). The function may be timing out or the API key may not be set.`);
+  let data;
+  try{data=JSON.parse(text);}catch(e){throw new Error(`Server returned invalid JSON (status ${resp.status}).`);}
+  if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
+  if(!data.content)throw new Error(`Unexpected API response: ${text.slice(0,300)}`);
   return data.content.map(c=>c.text||'').join('').trim();
 }
 
@@ -614,7 +611,6 @@ function compressImage(file,maxW=900){
 
 async function scanStrip(file){
   if(!file||!file.type.startsWith('image/'))return;
-  if(!S.apiKey){S.tab='chat';S.messages.push({role:'assistant',content:'⚠ Add your Anthropic API key in ⚙ settings to scan or upload strips. You can also enter readings manually in the Chemistry tab.'});render();return;}
   S.scanning=true;S.thinking=true;S.tab='chat';render();updateScanBtn();
   try{
     const {base64,mediaType}=await compressImage(file);
