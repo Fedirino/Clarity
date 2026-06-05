@@ -552,13 +552,14 @@ const SYSTEM=`You are Clarity, a friendly knowledgeable personal pool assistant 
 const STRIP_PROMPT=`You are Clarity. Analyze this 7-in-1 pool test strip photo and estimate values from pad colors. Always give a number for every field. Respond ONLY with JSON: {"chlorine":<free chlorine n>,"totalChlorine":<total chlorine n>,"ph":<n>,"alkalinity":<n>,"hardness":<n>,"cyanuric":<n>,"notes":"brief"}`;
 
 async function callClaude(body){
-  const resp=await fetch('/.netlify/functions/claude',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(body),
-  });
-  const data=await resp.json();
-  if(data.error)throw new Error(data.error.message);
+  let resp;
+  try{resp=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});}
+  catch(e){throw new Error('Network error — check your connection.');}
+  const text=await resp.text();
+  if(!text)throw new Error(`Empty response from server (status ${resp.status}). The function may be timing out or the API key may not be set.`);
+  let data;
+  try{data=JSON.parse(text);}catch(e){throw new Error(`Server returned invalid JSON (status ${resp.status}).`);}
+  if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
   return data.content.map(c=>c.text||'').join('').trim();
 }
 
