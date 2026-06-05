@@ -4,17 +4,27 @@
 // Set ANTHROPIC_API_KEY in Netlify → Site settings → Environment variables.
 
 exports.handler = async (event) => {
-  // Only allow POST
+  const headers = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Access-Control-Allow-Headers': 'Content-Type',
+  };
+
+  // Handle CORS preflight
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 204, headers, body: '' };
+  }
+
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: JSON.stringify({ error: 'Method not allowed' }) };
+    return { statusCode: 405, headers, body: JSON.stringify({ error: { message: 'Method not allowed' } }) };
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
+    console.error('ANTHROPIC_API_KEY environment variable is not set');
     return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: { message: 'Server API key not configured.' } }),
+      statusCode: 500, headers,
+      body: JSON.stringify({ error: { message: 'Server API key not configured. Add ANTHROPIC_API_KEY in Netlify → Site settings → Environment variables, then redeploy.' } }),
     };
   }
 
@@ -29,18 +39,13 @@ exports.handler = async (event) => {
       body: event.body,
     });
 
-    const data = await resp.json();
-
-    return {
-      statusCode: resp.status,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    };
+    const data = await resp.text();
+    return { statusCode: resp.status, headers, body: data };
   } catch (err) {
+    console.error('Proxy error:', err);
     return {
-      statusCode: 502,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ error: { message: 'Failed to reach Anthropic API.' } }),
+      statusCode: 502, headers,
+      body: JSON.stringify({ error: { message: 'Failed to reach Anthropic API: ' + err.message } }),
     };
   }
 };
