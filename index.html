@@ -180,6 +180,46 @@ textarea:focus,input:focus,select:focus{outline:none}
 .send{width:33px;height:33px;border-radius:9px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;background:rgba(255,255,255,.05);color:var(--mut);transition:.2s}
 .send.live{background:linear-gradient(135deg,var(--teal1),var(--teal2));color:#fff}
 .foot{max-width:660px;margin:7px auto 0;font-size:10px;color:var(--mut2);text-align:center;font-family:'DM Mono',monospace}
+
+/* calibration */
+.cal-btn{display:flex;align-items:center;gap:8px;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:12px 14px;color:var(--mut);font-size:12px;cursor:pointer;transition:.2s;font-family:inherit;margin-top:12px;text-align:left}
+.cal-btn:hover{color:var(--txt);border-color:var(--line2)}
+.cal-btn .cal-ic{font-size:18px;flex-shrink:0}
+.cal-btn .cal-info{flex:1;min-width:0}
+.cal-btn .cal-title{font-size:12px;font-weight:500;color:var(--txt);margin-bottom:2px}
+.cal-btn .cal-sub{font-size:10px;color:var(--mut2);line-height:1.4}
+.cal-badge{font-size:9px;padding:3px 8px;border-radius:6px;font-family:'DM Mono',monospace;letter-spacing:.5px;white-space:nowrap}
+.cal-badge.active{color:var(--green);background:rgba(92,200,160,.12)}
+.cal-badge.none{color:var(--mut2);background:rgba(255,255,255,.05)}
+
+.cal-body{padding:4px 0}
+.cal-step{display:flex;align-items:flex-start;gap:12px;margin-bottom:16px}
+.cal-num{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--teal1),var(--teal2));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex-shrink:0;margin-top:1px}
+.cal-step-text{font-size:13px;color:var(--mut);line-height:1.55}
+.cal-step-text strong{color:var(--txt);font-weight:500}
+
+.cal-photos{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+.cal-photo{position:relative;width:72px;height:72px;border-radius:12px;overflow:hidden;border:1px solid var(--line2);flex-shrink:0}
+.cal-photo img{width:100%;height:100%;object-fit:cover}
+.cal-photo .cal-rm{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.7);border:none;color:var(--coral);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
+.cal-photo .cal-rm:hover{background:var(--coral);color:#fff}
+.cal-add-photo{width:72px;height:72px;border-radius:12px;border:2px dashed var(--line2);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:.2s;gap:3px;color:var(--mut)}
+.cal-add-photo:hover{border-color:var(--aqua);color:var(--aqua)}
+.cal-add-photo .plus{font-size:20px;line-height:1}
+.cal-add-photo .lbl{font-size:8px;letter-spacing:1px;text-transform:uppercase}
+
+.cal-status{display:flex;align-items:center;gap:8px;padding:11px 14px;border-radius:11px;font-size:12px;margin:12px 0}
+.cal-status.processing{background:rgba(91,198,220,.1);border:1px solid rgba(91,198,220,.2);color:var(--aqua)}
+.cal-status.success{background:rgba(92,200,160,.1);border:1px solid rgba(92,200,160,.2);color:var(--green)}
+.cal-status.error{background:rgba(236,138,114,.1);border:1px solid rgba(236,138,114,.2);color:var(--coral)}
+.cal-status .spin{width:14px;height:14px;border:2px solid var(--aqua);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+
+.cal-preview{background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:12px;padding:14px;margin:12px 0}
+.cal-preview .cal-prev-title{font-size:10px;color:var(--mut);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px}
+.cal-prev-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.cal-prev-item{background:var(--panel);border-radius:8px;padding:8px 10px;border:1px solid var(--line)}
+.cal-prev-item .cpk{font-size:9px;color:var(--mut2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
+.cal-prev-item .cpv{font-size:12px;font-family:'DM Mono',monospace;color:var(--aqua2)}
 </style>
 </head>
 <body>
@@ -209,7 +249,7 @@ textarea:focus,input:focus,select:focus{outline:none}
         <button class="send" id="sendBtn">↑</button>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a test strip · Enter to send · <span style="opacity:.45">v1.1.0</span></div>
+    <div class="foot">📷 snap or 📁 upload a test strip · Enter to send · <span style="opacity:.45">v1.3.0</span></div>
   </div>
 </div>
 
@@ -227,6 +267,43 @@ textarea:focus,input:focus,select:focus{outline:none}
       <button class="ghost" id="tDelete" style="display:none;flex:0 0 auto;padding-left:18px;padding-right:18px;color:var(--coral)">Delete</button>
       <button class="ghost" onclick="closeScrim('taskScrim')">Cancel</button>
       <button class="solid" id="tSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- calibration modal -->
+<div class="scrim" id="calScrim">
+  <div class="modal" style="max-height:92vh;overflow-y:auto">
+    <div class="grab"></div>
+    <h2>🎯 Calibrate test strips</h2>
+    <div style="font-size:12px;color:var(--mut);margin-bottom:14px;line-height:1.5">Clarity defaults to <strong style="color:var(--aqua2)">AquaChek 7-Way</strong> strips. Using a different brand? Calibrate below for accurate readings.</div>
+    <div class="cal-body">
+      <div class="cal-step">
+        <div class="cal-num">1</div>
+        <div class="cal-step-text"><strong>Find the color reference card</strong> that came with your test strips — it's usually on the bottle label or a separate insert.</div>
+      </div>
+      <div class="cal-step">
+        <div class="cal-num">2</div>
+        <div class="cal-step-text"><strong>Take photos of the card.</strong> If it wraps around the bottle, take multiple photos to capture all the color blocks. You can add up to 4 photos.</div>
+      </div>
+      <div class="cal-step">
+        <div class="cal-num">3</div>
+        <div class="cal-step-text"><strong>Hit Calibrate</strong> and we'll map the colors to values for your specific brand so future scans are more accurate.</div>
+      </div>
+      <div class="cal-photos" id="calPhotos">
+        <label class="cal-add-photo" id="calAddBtn">
+          <span class="plus">＋</span>
+          <span class="lbl">Photo</span>
+        </label>
+      </div>
+      <input id="calFileIn" type="file" accept="image/*" capture="environment" style="display:none">
+      <div id="calStatus"></div>
+      <div id="calPreview"></div>
+    </div>
+    <div class="mact">
+      <button class="ghost" id="calClearBtn" style="display:none;flex:0 0 auto;padding-left:18px;padding-right:18px;color:var(--coral)">Clear calibration</button>
+      <button class="ghost" onclick="closeScrim('calScrim')">Cancel</button>
+      <button class="solid" id="calRunBtn" style="opacity:.4;cursor:default">Calibrate</button>
     </div>
   </div>
 </div>
@@ -293,7 +370,7 @@ let S={
   gallons: store.get('gallons')||15000,
   history: store.get('history')||[],
   tasks: store.get('tasks')||defaultTasks(),
-  messages:[{role:'assistant',content:"Hi! I'm Clarity, your personal pool assistant. I can help with water chemistry, maintenance, troubleshooting and seasonal advice.\n\nTap 📷 to snap a test strip with your camera, or 📁 to upload a photo. You can also use the Chemistry tab to log readings and get exact dosing amounts."}],
+  messages:[{role:'assistant',content:"Hi! I'm Clarity, your personal pool assistant. I can help with water chemistry, maintenance, troubleshooting and seasonal advice.\n\nTap 📷 to snap a test strip with your camera, or 📁 to upload a photo. You can also use the Chemistry tab to log readings and get exact dosing amounts.\n\nI'm calibrated for AquaChek 7-Way test strips by default — they're reliable and easy to read. If you use a different brand, tap ⚙ → Strip calibration to photograph your color reference card and I'll adapt to your strips."}],
   tab:'chat', thinking:false, scanning:false, setupOpen:false, editTask:null,
 };
 function defaultTasks(){
@@ -329,15 +406,26 @@ function renderSetup(){
   const el=$('setup');
   if(!S.setupOpen){el.style.display='none';return;}
   el.style.display='block';
+  const cal=store.get('calibration');
+  const calLabel=cal?`${cal.brand||'Custom'} · ${new Date(cal.timestamp).toLocaleDateString()}`:'AquaChek 7-Way (default)';
   el.innerHTML=`
     <div class="setup">
       <div class="lab">Pool size (gallons)</div>
       <div class="chips">${[8000,12000,15000,20000,25000,30000].map(g=>
         `<button class="chip ${S.gallons===g?'on':''}" data-g="${g}">${(g/1000)}k</button>`).join('')}</div>
       <div class="hint">Dosing amounts scale to your pool size. Pick the closest match.</div>
-      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v1.1.0</div>
+      <button class="cal-btn" id="openCalBtn">
+        <span class="cal-ic">🎯</span>
+        <div class="cal-info">
+          <div class="cal-title">Strip calibration</div>
+          <div class="cal-sub">${esc(calLabel)}</div>
+        </div>
+        <span class="cal-badge ${cal?'active':'none'}">${cal?'Custom':'Default'}</span>
+      </button>
+      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v1.3.0</div>
     </div>`;
   el.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{S.gallons=+c.dataset.g;persist();renderSetup();renderTabs();render()});
+  $('openCalBtn').onclick=()=>{openCalibration()};
 }
 
 function render(){
@@ -368,7 +456,7 @@ function readingCardHTML(k,v){
 }
 
 function renderChat(b){
-  const quick=["How often should I test my water?","My water looks cloudy — what do I check?","How do I shock my pool?","When should I open or close for the season?"];
+  const quick=["My water is cloudy — what should I do?","I think I have algae growing","My chlorine keeps dropping to zero","The water smells strongly of chlorine"];
   let html='<div class="bin">';
   S.messages.forEach(m=>{
     if(m.type==='scan'){
@@ -385,7 +473,7 @@ function renderChat(b){
   });
   if(S.thinking)html+=`<div class="msg"><div class="av">${AV}</div><div class="dots"><i style="animation-delay:0s"></i><i style="animation-delay:.2s"></i><i style="animation-delay:.4s"></i></div></div>`;
   if(S.messages.length===1&&!S.thinking){
-    html+=`<div class="sugg"><div class="h">Suggested questions</div>${quick.map(q=>`<button class="sg" data-q="${esc(q)}">${q}</button>`).join('')}</div>`;
+    html+=`<div class="sugg"><div class="h">Common issues</div>${quick.map(q=>`<button class="sg" data-q="${esc(q)}">${q}</button>`).join('')}</div>`;
   }
   html+='<div id="bottom"></div></div>';
   b.innerHTML=html;
@@ -551,7 +639,33 @@ function logReading(read){
 const MODEL='claude-sonnet-4-6';  // Opus: claude-opus-4-6 · Haiku: claude-haiku-4-5-20251001
 const SCAN_MODEL='claude-haiku-4-5-20251001'; // cheaper model for strip JSON extraction
 const SYSTEM=`You are Clarity, a friendly knowledgeable personal pool assistant for an inground pool owner. Help with water chemistry & balancing, maintenance schedules, troubleshooting (algae, cloudy water, equipment), chemical dosing, and seasonal advice. Be specific, practical and concise. Today is ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}.`;
-const STRIP_PROMPT=`You are Clarity. Analyze this 7-in-1 pool test strip photo and estimate values from pad colors. Always give a number for every field. Respond ONLY with JSON: {"chlorine":<free chlorine n>,"totalChlorine":<total chlorine n>,"ph":<n>,"alkalinity":<n>,"hardness":<n>,"cyanuric":<n>,"notes":"brief"}`;
+const STRIP_PROMPT_BASE=`You are Clarity. Analyze this pool test strip photo and estimate values from pad colors. The DEFAULT strip brand is AquaChek 7-Way (Aqua 7). Use these known value scales for AquaChek 7-Way strips unless the user has calibrated a different brand:
+
+- Free Chlorine (ppm): 0, 0.5, 1, 3, 5, 10
+- Total Chlorine (ppm): 0, 0.5, 1, 3, 5, 10
+- pH: 6.2, 6.8, 7.2, 7.8, 8.4
+- Total Alkalinity (ppm): 0, 40, 80, 120, 180, 240
+- Calcium Hardness (ppm): 0, 25, 50, 120, 250, 425, 1000
+- Cyanuric Acid (ppm): 0, 30, 50, 100, 150, 300
+
+Pad order on the strip (bottom to top): Total Hardness, Free Chlorine, Total Chlorine, pH, Total Alkalinity, Cyanuric Acid.
+
+Match each pad color to the closest value on the scale above. Always give a number for every field. Respond ONLY with JSON: {"chlorine":<free chlorine n>,"totalChlorine":<total chlorine n>,"ph":<n>,"alkalinity":<n>,"hardness":<n>,"cyanuric":<n>,"notes":"brief"}`;
+function getStripPrompt(){
+  const cal=store.get('calibration');
+  if(!cal||!cal.mapping)return STRIP_PROMPT_BASE;
+  return STRIP_PROMPT_BASE.replace(/The DEFAULT strip brand is AquaChek 7-Way.*?Cyanuric Acid\.\n/s,
+    '')+`\n\nIMPORTANT: The user has calibrated their test strips. IGNORE the default AquaChek values. Use this reference color-to-value mapping from their specific brand (${cal.brand||'unknown'}) to interpret pad colors:\n${JSON.stringify(cal.mapping)}\nMatch the strip pad colors against these calibrated reference values.`;
+}
+
+const CAL_PROMPT=`You are Clarity. The user is showing you the color reference card/chart from their pool test strip bottle or packaging. This card shows what colors correspond to what chemical values.
+
+Extract the brand name and the complete color-to-value mapping for every parameter shown. Each parameter will have multiple color blocks, each representing a specific value.
+
+Respond ONLY with JSON in this format:
+{"brand":"<brand name>","mapping":{"chlorine":{"values":[0,0.5,1,2,3,5,10],"colors":["yellow","light green","green","dark green",...]},"totalChlorine":{"values":[...],"colors":[...]},"ph":{"values":[...],"colors":[...]},"alkalinity":{"values":[...],"colors":[...]},"hardness":{"values":[...],"colors":[...]},"cyanuric":{"values":[...],"colors":[...]}}}
+
+If a parameter isn't visible in this photo, set its value to null. Include exact numeric values from the card. Describe colors precisely (e.g. "pale pink", "deep magenta", "olive green").`;
 
 const MAX_HISTORY_MSGS=10;  // max message pairs sent to API
 const DAILY_LIMIT=30;       // max API calls per day
@@ -615,7 +729,7 @@ async function scanStrip(file){
   try{
     const {base64,mediaType}=await compressImage(file);
     const raw=await callClaude({model:SCAN_MODEL,max_tokens:300,
-      messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:mediaType,data:base64}},{type:'text',text:STRIP_PROMPT}]}]});
+      messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:mediaType,data:base64}},{type:'text',text:getStripPrompt()}]}]});
     const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
     const readings={};KEYS.forEach(k=>readings[k]=parsed[k]??null);
     S.messages.push({role:'assistant',type:'scan',readings});
@@ -630,6 +744,9 @@ async function scanStrip(file){
         doses.map(d=>`▸ ${d.nm}: ${d.amt}\n  ${d.ex}`).join('\n\n');
     }
     if(parsed.notes)advice+="\n\n📝 "+parsed.notes;
+    const calData=store.get('calibration');
+    if(calData)advice+="\n\n🎯 Using "+calData.brand+" strip calibration.";
+    else advice+="\n\n🎯 Read as AquaChek 7-Way (default). Using different strips? Calibrate in ⚙ settings.";
     S.messages.push({role:'assistant',content:advice});
   }catch(e){S.messages.push({role:'assistant',content:`⚠ Couldn't read that strip: ${e.message}`});}
   S.scanning=false;S.thinking=false;render();updateScanBtn();
@@ -653,6 +770,127 @@ $('uploadIn').onchange=e=>{scanStrip(e.target.files[0]);e.target.value=''};
 $('tSave').onclick=saveTask;
 $('tDelete').onclick=()=>{if(S.editTask&&confirm('Delete this task?')){S.tasks=S.tasks.filter(x=>x.id!==S.editTask);persist();closeScrim('taskScrim');render();}};
 $('taskScrim').onclick=e=>{if(e.target.id==='taskScrim')closeScrim('taskScrim')};
+$('calScrim').onclick=e=>{if(e.target.id==='calScrim')closeScrim('calScrim')};
+
+// ── Calibration ──
+let calPhotos=[]; // [{file,base64,mediaType,preview}]
+let calProcessing=false;
+
+function openCalibration(){
+  calPhotos=[];
+  calProcessing=false;
+  $('calScrim').classList.add('on');
+  renderCalUI();
+  const cal=store.get('calibration');
+  if(cal){
+    $('calClearBtn').style.display='block';
+    renderCalPreview(cal);
+  } else {
+    $('calClearBtn').style.display='none';
+    $('calPreview').innerHTML='';
+  }
+}
+
+function renderCalUI(){
+  const cont=$('calPhotos');
+  let html='';
+  calPhotos.forEach((p,i)=>{
+    html+=`<div class="cal-photo"><img src="${p.preview}"><button class="cal-rm" data-idx="${i}">✕</button></div>`;
+  });
+  if(calPhotos.length<4){
+    html+=`<label class="cal-add-photo" id="calAddInner"><span class="plus">＋</span><span class="lbl">${calPhotos.length===0?'Photo':'More'}</span></label>`;
+  }
+  cont.innerHTML=html;
+  // wire remove buttons
+  cont.querySelectorAll('.cal-rm').forEach(btn=>btn.onclick=e=>{
+    e.stopPropagation();
+    calPhotos.splice(+btn.dataset.idx,1);
+    renderCalUI();
+  });
+  // wire add button
+  const addBtn=document.getElementById('calAddInner');
+  if(addBtn)addBtn.onclick=()=>$('calFileIn').click();
+  // update run button state
+  const run=$('calRunBtn');
+  if(calPhotos.length>0&&!calProcessing){
+    run.style.opacity='1';run.style.cursor='pointer';
+  } else {
+    run.style.opacity='.4';run.style.cursor='default';
+  }
+}
+
+$('calFileIn').onchange=async e=>{
+  const file=e.target.files[0];
+  e.target.value='';
+  if(!file||!file.type.startsWith('image/')||calPhotos.length>=4)return;
+  const {base64,mediaType}=await compressImage(file,1200);
+  const preview=URL.createObjectURL(file);
+  calPhotos.push({file,base64,mediaType,preview});
+  renderCalUI();
+};
+
+$('calRunBtn').onclick=async()=>{
+  if(calPhotos.length===0||calProcessing)return;
+  calProcessing=true;
+  renderCalUI();
+  $('calStatus').innerHTML=`<div class="cal-status processing"><div class="spin"></div>Analyzing ${calPhotos.length} photo${calPhotos.length>1?'s':''} — this may take a moment…</div>`;
+  $('calPreview').innerHTML='';
+  try{
+    // Build message content with all photos
+    const content=[];
+    calPhotos.forEach((p,i)=>{
+      content.push({type:'image',source:{type:'base64',media_type:p.mediaType,data:p.base64}});
+      if(calPhotos.length>1)content.push({type:'text',text:`[Photo ${i+1} of ${calPhotos.length}]`});
+    });
+    const multiNote=calPhotos.length>1?`\n\nThe user has sent ${calPhotos.length} photos of the same reference card (it may wrap around a bottle). Combine information from ALL photos into one complete mapping. If the same parameter appears in multiple photos, use the clearest one.`:'';
+    content.push({type:'text',text:CAL_PROMPT+multiNote});
+
+    const raw=await callClaude({model:MODEL,max_tokens:1200,messages:[{role:'user',content}]});
+    const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
+    if(!parsed.mapping)throw new Error('No mapping data found in the response.');
+
+    // Save calibration
+    const calData={brand:parsed.brand||'Custom',mapping:parsed.mapping,timestamp:Date.now(),photoCount:calPhotos.length};
+    store.set('calibration',calData);
+
+    $('calStatus').innerHTML=`<div class="cal-status success">✓ Calibrated for ${esc(calData.brand)} strips</div>`;
+    $('calClearBtn').style.display='block';
+    renderCalPreview(calData);
+    renderSetup();
+  }catch(e){
+    $('calStatus').innerHTML=`<div class="cal-status error">⚠ ${esc(e.message)}</div>`;
+  }
+  calProcessing=false;
+  renderCalUI();
+};
+
+$('calClearBtn').onclick=()=>{
+  if(confirm('Remove calibration? Scans will use default interpretation.')){
+    store.del('calibration');
+    $('calStatus').innerHTML='';
+    $('calPreview').innerHTML='';
+    $('calClearBtn').style.display='none';
+    renderSetup();
+  }
+};
+
+function renderCalPreview(cal){
+  if(!cal||!cal.mapping){$('calPreview').innerHTML='';return;}
+  const m=cal.mapping;
+  let html=`<div class="cal-preview"><div class="cal-prev-title">${esc(cal.brand)} · ${cal.photoCount||1} photo${(cal.photoCount||1)>1?'s':''} · calibrated ${new Date(cal.timestamp).toLocaleDateString()}</div><div class="cal-prev-grid">`;
+  const paramLabels={chlorine:'Free Chlorine',totalChlorine:'Total Chlorine',ph:'pH',alkalinity:'Alkalinity',hardness:'Hardness',cyanuric:'CYA'};
+  for(const[k,label] of Object.entries(paramLabels)){
+    const d=m[k];
+    if(d&&d.values){
+      const range=d.values;
+      html+=`<div class="cal-prev-item"><div class="cpk">${label}</div><div class="cpv">${range[0]}–${range[range.length-1]}${k==='ph'?'':' ppm'} · ${range.length} levels</div></div>`;
+    } else {
+      html+=`<div class="cal-prev-item"><div class="cpk">${label}</div><div class="cpv" style="color:var(--mut2)">Not detected</div></div>`;
+    }
+  }
+  html+='</div></div>';
+  $('calPreview').innerHTML=html;
+}
 
 render();
 </script>
