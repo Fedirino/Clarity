@@ -1,87 +1,41 @@
-# Clarity — Personal Pool Assistant
+# Clarity — My First App: How I Used AI to Stop Guessing My Pool Chemicals
 
-A single-page web app that helps an inground swimming-pool owner manage water
-chemistry, dosing, test history, and maintenance — with an AI assistant and a
-camera-based test-strip scanner.
+Hey there! Thanks for stopping by. 
 
----
+This is the very first app I have ever built! I’m currently a student learning about artificial intelligence and data technology, and I wanted to build something real to test what I'm learning. 
 
-## Project structure
+I own an inground pool and got incredibly tired of the constant guesswork that comes with water maintenance[span_0](start_span)[span_0](end_span). Keeping track of free chlorine, pH, and alkalinity usually involves squinting at a plastic test strip bottle, trying to match fading colors, and doing annoying manual math to figure out how many ounces of chemicals to dump into the water[span_1](start_span)[span_1](end_span).
 
-```
-index.html                   ← the entire front-end (no build step)
-netlify/functions/claude.js  ← serverless proxy that keeps the API key private
-README.md
-```
+**Clarity changes that.** It’s a mobile-optimized web app that lets you snap a picture of your test strip, uses AI to read the chemical levels, and instantly does the math to tell you *exactly* how much of each chemical to add based on your pool's gallons[span_2](start_span)[span_2](end_span). 
 
-## How to deploy (GitHub → Netlify)
+Building this from scratch was a massive learning experience for me. I had to figure out how to make a visual layout, mathematical formulas, and a live AI assistant all talk to each other to solve a real-world problem[span_3](start_span)[span_3](end_span).
 
-1. **Create a GitHub repo** — push `index.html`, `netlify/functions/claude.js`,
-   and this README.
-2. **Connect to Netlify** — log in at [app.netlify.com](https://app.netlify.com),
-   click "Add new site → Import an existing project", pick your GitHub repo.
-   Leave build settings blank (no build command, publish directory = `/`).
-3. **Add your API key** — in Netlify go to **Site settings → Environment
-   variables → Add a variable**:
-   - Key: `ANTHROPIC_API_KEY`
-   - Value: your `sk-ant-...` key
-4. **Trigger a deploy** — go to **Deploys → Trigger deploy → Deploy site**.
-5. **Share the URL** — Netlify gives you a `https://your-site.netlify.app` link.
-   Anyone who opens it gets the full app — chat, strip scanning, chemistry,
-   schedule — with no API key needed on their end.
+![Clarity App Demo](https://via.placeholder.com/800x450.png?text=Add+a+cool+screenshot+or+gif+of+your+app+here)
 
-### Updating the app
+## 🏊‍♂️ What It Does (And Why I Built It This Way)
 
-Push changes to GitHub and Netlify auto-deploys within a minute.
+* **Camera-Based Scanning:** You can snap or upload a photo of a test strip right from your phone[span_4](start_span)[span_4](end_span). I hooked up a lightweight AI vision model (`claude-haiku`) to look at the photo and read the 6 core pool metrics for you[span_5](start_span)[span_5](end_span).
+* **The "Different Brand" Bottle Problem:** I quickly realized that people use different brands of test strips, and the colors vary wildly[span_6](start_span)[span_6](end_span). To fix this, I built a custom **Strip Calibration** feature[span_7](start_span)[span_7](end_span). You can take photos of *any* brand’s color reference chart on the back of the bottle, and the app teaches the AI how to read that specific brand[span_8](start_span)[span_8](end_span).
+* **Smart Math vs. AI Guesses:** AI can be notoriously unreliable at algebra. I didn't want the AI to guess chemical doses and ruin my pool liner. I isolated the logic by writing a standard JavaScript calculator code (`doseAdvice`) to handle the exact math based on pool size, using the AI strictly for conversational troubleshooting and advice[span_9](start_span)[span_9](end_span).
+* **Maintenance Tracker:** Includes a built-in checklist for routine stuff like backwashing the filter, skimming, and checking equipment so you don't forget your weekly schedule[span_10](start_span)[span_10](end_span).
 
----
+## 🛠️ The Tech I Learned to Put Together
 
-## What it does
+I wanted this app to be fast, lightweight, and look great on a phone screen:
+* **The Look and Feel:** Built using vanilla JavaScript, clean HTML5, and custom CSS[span_11](start_span)[span_11](end_span). Because I care a lot about fine details, I taught myself how to build a frosted-glass look (`backdrop-filter`), smooth loading animations, and dynamic wave motions for the navigation tabs[span_12](start_span)[span_12](end_span).
+* **The AI Brains:** I used the Anthropic Claude API[span_13](start_span)[span_13](end_span). I set up a two-model approach: a fast, cheap model (`Haiku`) to handle reading the image data, and a heavy-duty model (`Sonnet`) to act as the conversational pool expert[span_14](start_span)[span_14](end_span).
+* **The Hidden Backend:** Secure Netlify Serverless Functions to safely hide my AI account keys and handle daily limits so my personal budget doesn't melt from too many requests[span_15](start_span)[span_15](end_span).
+* **Memory:** It uses `LocalStorage` to save your test and task history directly on your phone, meaning you don't need a heavy database setup to keep track of your past pool tests[span_16](start_span)[span_16](end_span).
 
-- **Chat tab** — AI pool assistant (Claude via serverless proxy).
-  Suggested-question chips on first load.
-- **Chemistry tab** — enter 6 readings (Free Chlorine, Total Chlorine, pH,
-  Total Alkalinity, Calcium Hardness, Cyanuric Acid) and get exact chemical
-  dosing scaled to pool size. Chloramine check flags a shock when
-  total − free chlorine > 0.5 ppm.
-- **History tab** — every test saved locally with a 6-value scorecard. Tap a
-  test to expand and see dosing instructions.
-- **Schedule tab** — editable maintenance tasks sorted by urgency with
-  overdue / due-today badges.
-- **Test-strip scan** — 📷 opens camera, 📁 uploads a photo. Sends to Claude
-  vision, parses pad colors into readings, logs them, returns advice.
-- **Pool size** — set in ⚙ settings (gallons); all dosing scales to it.
+## 🧠 Lessons Learned & Challenges I Handled
 
-## Architecture
-
-- **Front-end:** single `index.html`, no build step, no dependencies. All
-  user state in `localStorage` under `clarity-*` keys.
-- **Back-end:** one Netlify Function (`netlify/functions/claude.js`) that
-  proxies POST requests to the Anthropic Messages API. The API key lives only
-  in Netlify's environment variables — never sent to the browser.
-- **No data leaves the device** except the direct proxy calls for chat and
-  strip scanning.
-
-## Design / brand
-
-- Dark aquatic theme, aqua/teal palette, Playfair Display + DM Sans + DM Mono.
-- Active nav tab fills with an animated wave crest.
-- Logo = twin-waves mark; assistant avatar = water drop wearing goggles.
-- PWA meta tags for "Add to Home Screen" fullscreen on phones.
-
-## Code map (inside index.html)
-
-- `IDEAL` — the 6 chemistry parameters with ideal ranges + labels.
-- `doseAdvice(read, gal)` — deterministic dosing engine.
-- `S` — single app-state object; `persist()` saves it.
-- `render()` → `renderChat / renderChem / renderHistory / renderSchedule`.
-- `callClaude(body)` — POSTs to `/.netlify/functions/claude`.
-- `scanStrip(file)` — compresses image, sends to vision, parses JSON.
-- Task editor lives in the `#taskScrim` modal.
-
-## Ideas for next steps
-
-- Trend charts in History (chemistry over time).
-- Seasonal open/close checklists in Schedule.
-- Rate limiting / abuse protection on the proxy function.
-- Proper PNG app icons (current icon is SVG; iOS prefers 180×180 PNG).
+### 1. Training the AI to Keep It Simple
+As a first-time developer, getting an AI to look at an image and give me *just* raw numbers—without a bunch of polite conversational fluff—was really tough. I learned how to use strict rules to force the AI to output a perfectly clean data layout (called a JSON object) every single time so my app's calculator could read it[span_17](start_span)[span_17](end_span):
+```json
+{
+  "chlorine": 1.5,
+  "ph": 7.4,
+  "alkalinity": 100,
+  "hardness": 250,
+  "cyanuric": 40
+}
