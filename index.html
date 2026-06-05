@@ -560,6 +560,7 @@ async function callClaude(body){
   let data;
   try{data=JSON.parse(text);}catch(e){throw new Error(`Server returned invalid JSON (status ${resp.status}).`);}
   if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
+  if(!data.content)throw new Error(`Unexpected API response: ${text.slice(0,300)}`);
   return data.content.map(c=>c.text||'').join('').trim();
 }
 
