@@ -209,7 +209,7 @@ textarea:focus,input:focus,select:focus{outline:none}
         <button class="send" id="sendBtn">↑</button>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a test strip · Enter to send</div>
+    <div class="foot">📷 snap or 📁 upload a test strip · Enter to send · <span style="opacity:.45">v1.1.0</span></div>
   </div>
 </div>
 
@@ -291,6 +291,7 @@ const store={
 };
 let S={
   gallons: store.get('gallons')||15000,
+  apiKey: store.get('key')||'',
   history: store.get('history')||[],
   tasks: store.get('tasks')||defaultTasks(),
   messages:[{role:'assistant',content:"Hi! I'm Clarity, your personal pool assistant. I can help with water chemistry, maintenance, troubleshooting and seasonal advice.\n\nTap 📷 to snap a test strip with your camera, or 📁 to upload a photo. You can also use the Chemistry tab to log readings and get exact dosing amounts."}],
@@ -308,7 +309,7 @@ function defaultTasks(){
     {id:7,t:'Inspect equipment & water level',freq:'Weekly',int:7,last:now-6*day,done:false},
   ];
 }
-function persist(){store.set('gallons',S.gallons);store.set('history',S.history);store.set('tasks',S.tasks);}
+function persist(){store.set('gallons',S.gallons);store.set('key',S.apiKey);store.set('history',S.history);store.set('tasks',S.tasks);}
 
 const $=id=>document.getElementById(id);
 const TABS=[['chat','Chat'],['chem','Chemistry'],['history','History'],['schedule','Schedule']];
@@ -334,9 +335,13 @@ function renderSetup(){
       <div class="lab">Pool size (gallons)</div>
       <div class="chips">${[8000,12000,15000,20000,25000,30000].map(g=>
         `<button class="chip ${S.gallons===g?'on':''}" data-g="${g}">${(g/1000)}k</button>`).join('')}</div>
-      <div class="hint">Dosing amounts scale to your pool size. Pick the closest match.</div>
+      <div class="lab">Anthropic API key — for chat &amp; strip scanning</div>
+      <input class="key" id="keyIn" type="password" placeholder="sk-ant-..." value="${S.apiKey}">
+      <div class="hint">Stored only in this browser, on this device. Needed for AI chat and the camera strip scan. Chemistry, History and Schedule work without it.</div>
+      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v1.1.0</div>
     </div>`;
   el.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{S.gallons=+c.dataset.g;persist();renderSetup();renderTabs();render()});
+  $('keyIn').onchange=e=>{S.apiKey=e.target.value.trim();persist();};
 }
 
 function render(){
@@ -548,30 +553,48 @@ function logReading(read){
 }
 
 const MODEL='claude-sonnet-4-6';  // Opus: claude-opus-4-6 · Haiku: claude-haiku-4-5-20251001
+const SCAN_MODEL='claude-haiku-4-5-20251001'; // cheaper model for strip JSON extraction
 const SYSTEM=`You are Clarity, a friendly knowledgeable personal pool assistant for an inground pool owner. Help with water chemistry & balancing, maintenance schedules, troubleshooting (algae, cloudy water, equipment), chemical dosing, and seasonal advice. Be specific, practical and concise. Today is ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}.`;
 const STRIP_PROMPT=`You are Clarity. Analyze this 7-in-1 pool test strip photo and estimate values from pad colors. Always give a number for every field. Respond ONLY with JSON: {"chlorine":<free chlorine n>,"totalChlorine":<total chlorine n>,"ph":<n>,"alkalinity":<n>,"hardness":<n>,"cyanuric":<n>,"notes":"brief"}`;
 
+const MAX_HISTORY_MSGS=10;  // max message pairs sent to API
+const DAILY_LIMIT=30;       // max API calls per day
+const COOLDOWN_MS=3000;     // min ms between API calls
+let lastCallTime=0;
+
+function checkUsage(){
+  const today=new Date().toDateString();
+  const usage=store.get('usage')||{date:today,count:0};
+  if(usage.date!==today){usage.date=today;usage.count=0;}
+  if(usage.count>=DAILY_LIMIT)throw new Error(`Daily limit of ${DAILY_LIMIT} requests reached. Resets tomorrow.`);
+  usage.count++;store.set('usage',usage);
+}
+
 async function callClaude(body){
-  let resp;
-  try{resp=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});}
-  catch(e){throw new Error('Network error — check your connection.');}
-  const text=await resp.text();
-  if(!text)throw new Error(`Empty response from server (status ${resp.status}). The function may be timing out or the API key may not be set.`);
-  let data;
-  try{data=JSON.parse(text);}catch(e){throw new Error(`Server returned invalid JSON (status ${resp.status}).`);}
-  if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
-  if(!data.content)throw new Error(`Unexpected API response: ${text.slice(0,300)}`);
+  if(!S.apiKey)throw new Error('Add your Anthropic API key in ⚙ settings to use chat & scanning.');
+  const now=Date.now();
+  if(now-lastCallTime<COOLDOWN_MS)throw new Error('Please wait a moment before sending another message.');
+  lastCallTime=now;
+  checkUsage();
+  const resp=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':S.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify(body),
+  });
+  const data=await resp.json();
+  if(data.error)throw new Error(data.error.message);
   return data.content.map(c=>c.text||'').join('').trim();
 }
 
 async function sendMessage(text){
   if(S.thinking||!text)return;
+  if(Date.now()-lastCallTime<COOLDOWN_MS)return;
   S.messages.push({role:'user',content:text});
   $('msgIn').value='';
   S.thinking=true;render();
   try{
-    const api=S.messages.filter(m=>m.role==='user'||(m.role==='assistant'&&!m.type)).map(m=>({role:m.role,content:m.content}));
-    const reply=await callClaude({model:MODEL,max_tokens:1000,
+    const api=S.messages.filter(m=>m.role==='user'||(m.role==='assistant'&&!m.type)).map(m=>({role:m.role,content:m.content})).slice(-MAX_HISTORY_MSGS);
+    const reply=await callClaude({model:MODEL,max_tokens:800,
       system:SYSTEM+`\nUser's pool: inground, ~${S.gallons.toLocaleString()} gallons.`,messages:api});
     S.messages.push({role:'assistant',content:reply});
   }catch(e){S.messages.push({role:'assistant',content:`⚠ ${e.message}`});}
@@ -591,21 +614,27 @@ function compressImage(file,maxW=900){
 
 async function scanStrip(file){
   if(!file||!file.type.startsWith('image/'))return;
+  if(!S.apiKey){S.tab='chat';S.messages.push({role:'assistant',content:'⚠ Add your Anthropic API key in ⚙ settings to scan or upload strips. You can also enter readings manually in the Chemistry tab.'});render();return;}
   S.scanning=true;S.thinking=true;S.tab='chat';render();updateScanBtn();
   try{
     const {base64,mediaType}=await compressImage(file);
-    const raw=await callClaude({model:MODEL,max_tokens:600,
+    const raw=await callClaude({model:SCAN_MODEL,max_tokens:300,
       messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:mediaType,data:base64}},{type:'text',text:STRIP_PROMPT}]}]});
     const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
     const readings={};KEYS.forEach(k=>readings[k]=parsed[k]??null);
     S.messages.push({role:'assistant',type:'scan',readings});
     logReading(readings);
-    const summary=KEYS.map(k=>{const v=readings[k],r=IDEAL[k];if(v==null)return null;return `${r.label}: ${v}${r.unit} (${statusOf(v,k)})`}).filter(Boolean).join(', ');
-    S.thinking=true;render();
-    const analysis=await callClaude({model:MODEL,max_tokens:1000,
-      system:SYSTEM+`\nUser's pool: inground, ${S.gallons.toLocaleString()} gallons.`,
-      messages:[{role:'user',content:`I scanned my test strip. Results: ${summary}. What should I do, with specific amounts?`}]});
-    S.messages.push({role:'assistant',content:analysis});
+    // Use local dosing engine instead of a second API call
+    const doses=doseAdvice(readings,S.gallons);
+    let advice;
+    if(doses.length===0){
+      advice="✨ Great news — all your levels are within the ideal range. No chemicals needed right now. Keep up the routine!";
+    } else {
+      advice="Here's what I'd recommend based on your strip results (for "+S.gallons.toLocaleString()+" gallons):\n\n"+
+        doses.map(d=>`▸ ${d.nm}: ${d.amt}\n  ${d.ex}`).join('\n\n');
+    }
+    if(parsed.notes)advice+="\n\n📝 "+parsed.notes;
+    S.messages.push({role:'assistant',content:advice});
   }catch(e){S.messages.push({role:'assistant',content:`⚠ Couldn't read that strip: ${e.message}`});}
   S.scanning=false;S.thinking=false;render();updateScanBtn();
 }
