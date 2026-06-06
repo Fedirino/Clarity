@@ -4,6 +4,22 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [1.5.2] — 2026-06-06
+
+### Fixed — Serverless function dropping image payloads
+- **Root cause: `req.write(string)` silently truncating multi-MB payloads** — The Netlify serverless function (`claude.js`) forwarded the request body to Anthropic by calling `req.write(JSON.stringify(payload))` with a raw string. For large payloads (a base64-encoded JPEG inside a JSON wrapper easily exceeds 1–2 MB), Node's `https.request.write(string)` can silently truncate the data, causing Anthropic to receive a malformed or image-less request. Fixed by converting the JSON string to a `Buffer` before writing: `req.write(Buffer.from(...))`. Buffer writes are byte-exact at any size.
+- **Body size limit was too aggressive** — The old 4 MB gate used `rawBody.length` (string character count), which doesn't account for Netlify's own base64 re-encoding of the body or multi-byte characters. Replaced with `Buffer.byteLength()` and raised the limit to 10 MB.
+- **Added `Content-Type: application/json; charset=utf-8`** — Explicit charset ensures the API interprets the payload correctly.
+- **Increased request timeout** — Raised from 25 s → 55 s. Vision requests with image payloads take longer for the model to process; 25 s was borderline.
+- **Added server-side payload logging** — The function now logs message count, whether an image is present, approximate image size, and the Anthropic response status to Netlify function logs for debugging.
+- **Added `messages` array validation** — Returns a clear 400 error if the frontend sends a request without a `messages` array, instead of forwarding a malformed payload.
+
+### Changed
+- Version bumped from 1.5.1 → 1.5.2 in footer and settings.
+- Old version archived as `old-v1.5.1.html`.
+
+---
+
 ## [1.5.1] — 2026-06-05
 
 ### Fixed — Anti-hallucination & image reliability
