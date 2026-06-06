@@ -33,8 +33,9 @@ Open it in a browser to run it.
 
 ```
 index.html                     ← the full app
+netlify.toml                   ← Netlify config (function path + bundler)
 netlify/functions/claude.js    ← serverless proxy (keeps API key safe)
-old-v1.2.0.html                ← archived previous version
+old-v1.3.0.html                ← archived previous version
 README.md
 CHANGELOG.md
 ```

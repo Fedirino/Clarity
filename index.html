@@ -249,7 +249,7 @@ textarea:focus,input:focus,select:focus{outline:none}
         <button class="send" id="sendBtn">↑</button>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a test strip · Enter to send · <span style="opacity:.45">v1.3.0</span></div>
+    <div class="foot">📷 snap or 📁 upload a test strip · Enter to send · <span style="opacity:.45">v1.3.1</span></div>
   </div>
 </div>
 
@@ -423,7 +423,7 @@ function renderSetup(){
         </div>
         <span class="cal-badge ${cal?'active':'none'}">${cal?'Custom':'Default'}</span>
       </button>
-      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v1.3.0</div>
+      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v1.3.1</div>
     </div>`;
   el.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{S.gallons=+c.dataset.g;persist();renderSetup();renderTabs();render()});
   $('openCalBtn').onclick=()=>{openCalibration()};
@@ -688,13 +688,14 @@ async function callClaude(body){
   checkUsage();
   let resp;
   try{resp=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});}
-  catch(e){throw new Error('Network error — check your connection.');}
+  catch(e){throw new Error('Cannot reach the server. If testing locally, deploy to Netlify first — the AI features need the serverless function.');}
   const text=await resp.text();
-  if(!text)throw new Error(`Empty response (status ${resp.status}).`);
+  if(resp.status===404)throw new Error('Serverless function not found. Make sure netlify/functions/claude.js is deployed and ANTHROPIC_API_KEY is set in Netlify environment variables.');
+  if(!text)throw new Error(`Empty response (status ${resp.status}). Check Netlify function logs for errors.`);
   let data;
-  try{data=JSON.parse(text);}catch(e){throw new Error(`Server error (status ${resp.status}). The function may not be deployed yet.`);}
+  try{data=JSON.parse(text);}catch(e){throw new Error(`Server returned non-JSON (status ${resp.status}): ${text.slice(0,200)}`);}
   if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
-  if(!data.content)throw new Error(`Unexpected API response: ${text.slice(0,300)}`);
+  if(!data.content)throw new Error(`No content in API response. Status ${resp.status}. Response: ${text.slice(0,200)}`);
   return data.content.map(c=>c.text||'').join('').trim();
 }
 
