@@ -4,6 +4,22 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [1.3.1] — 2026-06-05
+
+### Fixed
+- **Serverless function rewritten** using Node.js built-in `https` module instead of `fetch` — guaranteed to work on all Netlify Node.js versions (16, 18, 20).
+- **Handles base64-encoded request bodies** — Netlify sometimes base64-encodes `event.body`; function now detects and decodes correctly.
+- **Added `netlify.toml`** — explicitly tells Netlify where to find the function directory and which bundler to use. Prevents "function not found" issues.
+- **25-second request timeout** on the API call — prevents the function from hanging if Anthropic is slow.
+- **Better frontend diagnostics** — `callClaude()` now gives specific error messages for 404 (function not deployed), network errors (testing locally), and non-JSON responses.
+- **Upload button in calibration** — 📷 Camera and 📁 Upload side by side so users can pick from their gallery instead of only using the camera.
+
+### Changed
+- Version bumped from 1.3.0 → 1.3.1.
+- Old version archived as `old-v1.3.0.html`.
+
+---
+
 ## [1.3.0] — 2026-06-05
 
 ### Added
