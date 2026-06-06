@@ -4,6 +4,36 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [1.5.0] — 2026-06-05
+
+### Changed — "Simple First" rewrite
+- **Removed fake scan pipeline** — The old flow used a separate `scanStrip()` function that sent the image to a cheaper model (Haiku) with a rigid JSON-extraction prompt, then parsed the JSON into structured result cards and ran a local dosing engine on the parsed values. This produced unreliable "precise-looking" results because JSON extraction from pad colors was fragile. Now every image — test strips included — goes through the normal Claude chat with a strong vision system prompt. Claude analyzes the strip in natural language, gives estimated readings, flags out-of-range levels, and recommends exact chemical amounts. No JSON parsing, no fake precision.
+- **Removed calibration system** — The multi-photo calibration flow (photograph your strip bottle's color card, extract a color-to-value mapping, store it in localStorage, inject it into the scan prompt) added complexity without reliability. Removed the entire calibration modal, CSS, and JS. Claude's vision handles any strip brand directly — just send the photo and ask.
+- **Removed scan result cards** — The `type:'scan'` chat messages with 6-parameter gauge cards are gone. Strip results now appear as normal assistant messages with human-readable analysis.
+- **Removed `SCAN_MODEL` / `STRIP_PROMPT_BASE` / `CAL_PROMPT` / `getStripPrompt()`** — all replaced by a single strong `SYSTEM` prompt that covers both strip analysis and general pool photos.
+- **Simplified attachment preview** — removed the "🔬 Scan strip" button. Attach a photo → type a question or just send → Claude analyzes it. One flow, no branching.
+- **Simplified input bar** — renamed `.scanbtn` → `.photobtn`, removed scan-busy spinner state. Buttons are just 📷 (camera) and 📁 (upload).
+- **Simplified settings** — removed calibration button and status badge. Settings is now just pool size.
+- **Raised `max_tokens`** from 1200 → 1500 for richer strip analysis in natural language.
+- **Updated system prompt** — comprehensive vision declaration with explicit test-strip analysis instructions (ideal ranges, dosing format, chemical amounts). Includes a `{POOL_SIZE}` placeholder so dosing advice is scaled to the user's pool.
+- Welcome message rewritten to focus on the simple workflow: send a photo, get analysis.
+- Suggested questions updated (replaced calibration-related chip).
+- Version bumped from 1.4.1 → 1.5.0 in footer and settings.
+- Old version archived as `old-v1.4.1.html`.
+
+### Removed
+- `scanStrip()` function and all scan-specific state (`S.scanning`).
+- `updateScanBtn()` function.
+- `SCAN_MODEL` constant (no longer using Haiku for a separate scan path).
+- `STRIP_PROMPT_BASE`, `CAL_PROMPT`, `getStripPrompt()`.
+- Calibration modal HTML (`#calScrim`) and all calibration CSS (`.cal-*` classes).
+- All calibration JS: `calPhotos`, `calProcessing`, `openCalibration()`, `renderCalUI()`, `renderCalPreview()`, calibration file-input handlers, `calRunBtn` / `calClearBtn` handlers.
+- Scan result rendering in `renderChat()` (the `type:'scan'` message branch).
+- `attach-scan` button and CSS.
+- `localStorage` key `clarity-calibration`.
+
+---
+
 ## [1.4.1] — 2026-06-05
 
 ### Fixed

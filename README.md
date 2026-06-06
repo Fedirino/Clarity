@@ -1,8 +1,8 @@
 # Clarity — Personal Pool Assistant
 
 A single-file web app that helps an inground swimming-pool owner manage water
-chemistry, dosing, test history, and maintenance — with an AI assistant and a
-camera-based test-strip scanner. First portfolio project.
+chemistry, dosing, test history, and maintenance — with an AI assistant powered
+by Claude's vision. First portfolio project.
 
 Everything lives in one file: **`index.html`**. No build step, no dependencies.
 Open it in a browser to run it.
@@ -12,10 +12,10 @@ Open it in a browser to run it.
 ## How to run
 
 - **Quick look (offline):** double-click `index.html`.
-  Chemistry, History and Schedule work offline. Chat and strip scanning require
+  Chemistry, History and Schedule work offline. Chat and photo analysis require
   the Netlify deployment below.
 
-- **Full features (chat + strip scan):** deploy to Netlify:
+- **Full features (chat + photo analysis):** deploy to Netlify:
   1. Push this folder to a GitHub repo, or drag the folder onto
      [app.netlify.com](https://app.netlify.com)'s "Deploy manually" drop zone.
   2. In the Netlify dashboard go to **Site settings → Environment variables →
@@ -24,7 +24,7 @@ Open it in a browser to run it.
      - Value: your key (`sk-ant-…`)
   3. Trigger a redeploy (Deploys → Trigger deploy) so the function picks up the
      new variable.
-  4. Open the site URL — chat and scanning should work immediately.
+  4. Open the site URL — chat and photo analysis should work immediately.
 
   The API key lives only on Netlify's server. Anyone you share the URL with can
   use the app without seeing or needing the key.
@@ -32,10 +32,11 @@ Open it in a browser to run it.
 ### File structure
 
 ```
-index.html                     ← the full app (v1.4.1)
+index.html                     ← the full app (v1.5.0)
 netlify.toml                   ← Netlify config (function path + bundler)
 netlify/functions/claude.js    ← serverless proxy (keeps API key safe)
-old-v1.4.0.html                ← archived previous version
+old-v1.4.1.html                ← archived previous version
+old-v1.4.0.html                ← archived earlier version
 old-v1.3.1.html                ← archived earlier version
 README.md
 CHANGELOG.md
@@ -46,9 +47,11 @@ CHANGELOG.md
 ## What it does (current features)
 
 - **Chat tab** — AI pool assistant (Anthropic API, model `claude-sonnet-4-6`)
-  with **vision**. Attach a photo via 📷 or 📁 and ask about pool water,
-  equipment, algae, or anything else — Clarity analyzes the image and responds.
-  Suggested-question chips on first load.
+  with **full vision**. Attach a photo via 📷 or 📁 and send it — Claude
+  analyzes test strips, pool water, equipment, algae, or anything else and
+  responds with specific actionable advice. No fake scan pipeline, no JSON
+  parsing — the image goes directly to Claude and you get a natural-language
+  expert analysis. Suggested-question chips on first load.
 - **Chemistry tab** — enter 6 readings (Free Chlorine, Total Chlorine, pH,
   Total Alkalinity, Calcium Hardness, Cyanuric Acid) and get exact chemical
   dosing scaled to pool size. Includes a chloramine check (flags a shock when
@@ -59,14 +62,21 @@ CHANGELOG.md
 - **Schedule tab** — fully editable maintenance tasks (add / edit / delete,
   custom name + frequency + interval in days). Sorted by urgency with
   overdue / due-today badges; checking one off resets its next-due date.
-- **Test-strip scan** — 📷 button opens the camera, sends the photo to Claude
-  vision, parses the pad colors into readings, logs them, and returns advice.
-  Defaults to **AquaChek 7-Way** strip scales and pad order.
-- **Strip calibration** — 🎯 in ⚙ settings: photograph the color reference
-  card from your test strip bottle (supports up to 4 photos for cards that
-  wrap around). Claude maps the brand's color-to-value scale and uses it on
-  all future scans. Only needed if you use a brand other than AquaChek 7-Way.
 - **Pool size** — set in ⚙ settings (gallons); all dosing scales to it.
+
+### How strip analysis works (v1.5.0+)
+
+1. Tap 📷 or 📁 to attach a photo of your test strip.
+2. (Optional) type a question — or just hit send.
+3. Claude sees the image and reads the pad colors against standard test strip
+   scales. It gives you estimated PPM levels for each parameter, flags anything
+   out of range, and tells you exactly what chemicals to add and how much (scaled
+   to your pool size).
+
+There is no separate "scan" mode, no JSON extraction, and no calibration step.
+Claude's vision handles any strip brand directly. This replaced the old
+`scanStrip()` pipeline which tried to extract structured JSON from a cheaper
+model and often produced unreliable results.
 
 ## Design / brand
 
@@ -80,9 +90,9 @@ CHANGELOG.md
 ## Data & storage
 
 All state is in browser `localStorage` under `clarity-*` keys: `gallons`,
-`history`, `tasks`, `calibration`, `usage`. Nothing leaves the device except
-the API calls routed through the Netlify serverless function. The API key is
-stored only as a Netlify environment variable.
+`history`, `tasks`, `usage`. Nothing leaves the device except the API calls
+routed through the Netlify serverless function. The API key is stored only as
+a Netlify environment variable.
 
 ---
 
@@ -95,12 +105,11 @@ stored only as a Netlify environment variable.
 - `callClaude(body)` — POSTs to `/.netlify/functions/claude`, which proxies to
   Anthropic. The API key is a server-side environment variable.
 - `sendMessage(text)` — sends a chat message, optionally with an attached image
-  in multimodal (vision) format.
-- `attachImage(file)` / `renderAttachPreview()` — image attachment flow for
-  general chat; shows preview with option to remove or quick-scan as strip.
-- `scanStrip(file)` — compresses the image, sends it to vision, parses JSON.
-- `openCalibration()` / `renderCalUI()` — multi-photo calibration flow for
-  strip reference cards; stores brand + color-to-value mapping.
+  in multimodal (vision) format. All image analysis (including test strips) goes
+  through this single path.
+- `attachImage(file)` / `renderAttachPreview()` — image attachment flow: shows
+  preview with option to remove.
+- `compressImage(file)` — resizes and JPEG-compresses before sending.
 - Task editor lives in the `#taskScrim` modal.
 
 ## Ideas for next steps (not built yet)
@@ -114,4 +123,5 @@ stored only as a Netlify environment variable.
 ## Note for continuing in a new chat session
 
 This README is the context handoff. The whole app is `index.html` — share that
-file (and this README) with the new session and ask it to continue from here.
+file (and this README + CHANGELOG) with the new session and ask it to continue
+from here.

@@ -24,7 +24,6 @@
 @keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-@keyframes sheen{to{background-position:200% center}}
 html,body{height:100%}
 body{
   background:
@@ -67,7 +66,6 @@ textarea:focus,input:focus,select:focus{outline:none}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
 .chip{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 12px;color:var(--mut);font-size:11px;cursor:pointer;transition:.2s;font-family:'DM Mono',monospace}
 .chip.on{background:rgba(91,198,220,.16);border-color:var(--aqua);color:var(--aqua)}
-.setup input.key{width:100%;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:10px;padding:10px 12px;color:var(--txt);font-size:12px;font-family:'DM Mono',monospace}
 .hint{font-size:10.5px;color:var(--mut2);margin-top:8px;line-height:1.55}
 
 .body{flex:1;overflow-y:auto;padding:18px 20px;-webkit-overflow-scrolling:touch}
@@ -86,19 +84,6 @@ textarea:focus,input:focus,select:focus{outline:none}
 .sugg .h{font-size:10px;color:var(--mut2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:9px}
 .sg{display:block;width:100%;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 15px;color:var(--mut);font-size:13px;cursor:pointer;margin-bottom:7px;font-family:inherit;transition:.2s}
 .sg:hover{color:var(--txt);border-color:var(--line2);transform:translateX(3px)}
-
-.scan{max-width:92%;background:var(--panel2);border:1px solid var(--line);border-radius:5px 17px 17px 17px;padding:15px 17px}
-.scan .h{font-size:10px;color:var(--mut);letter-spacing:1px;text-transform:uppercase;margin-bottom:11px}
-.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:11px}
-.rc{background:rgba(255,255,255,.04);border-radius:13px;padding:12px 13px;border:1px solid var(--line)}
-.rc .k{font-size:9px;color:var(--mut);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:3px}
-.rc .vr{display:flex;align-items:baseline;gap:4px}
-.rc .v{font-size:24px;font-weight:600;font-family:'Playfair Display',serif}
-.rc .un{font-size:10px;color:var(--mut2)}
-.rc .st{margin-left:auto;font-size:9px;padding:2px 7px;border-radius:5px;letter-spacing:1px}
-.gauge{position:relative;height:6px;background:rgba(255,255,255,.08);border-radius:3px;margin-top:9px}
-.gauge .ideal{position:absolute;height:100%;background:rgba(92,200,160,.22);border-radius:3px}
-.gauge .pin{position:absolute;top:-4px;width:14px;height:14px;border-radius:50%;border:2px solid var(--bg);transform:translateX(-7px)}
 
 /* generic cards / forms */
 .sec{display:flex;align-items:center;gap:10px;margin:2px 0 14px}
@@ -170,10 +155,8 @@ textarea:focus,input:focus,select:focus{outline:none}
 /* input bar */
 .inbar{padding:12px 16px max(20px,env(safe-area-inset-bottom));border-top:1px solid var(--line);background:rgba(8,20,32,.85);backdrop-filter:blur(10px);flex-shrink:0}
 .inbarin{max-width:660px;margin:0 auto;display:flex;gap:8px;align-items:flex-end}
-.scanbtn{width:46px;height:46px;border-radius:13px;background:var(--panel2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;flex-shrink:0;transition:.2s}
-.scanbtn:hover{border-color:var(--line2)}
-.scanbtn.busy{background:rgba(91,198,220,.2);border-color:var(--aqua)}
-.scanbtn .spin{width:18px;height:18px;border:2px solid var(--aqua);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+.photobtn{width:46px;height:46px;border-radius:13px;background:var(--panel2);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;flex-shrink:0;transition:.2s}
+.photobtn:hover{border-color:var(--line2)}
 .txtwrap{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:15px;padding:10px 14px;display:flex;align-items:flex-end;gap:8px;transition:.2s}
 .txtwrap:focus-within{border-color:var(--line2)}
 .txtwrap textarea{flex:1;background:none;border:none;color:var(--txt);font-size:16px;font-family:inherit;resize:none;line-height:1.5;max-height:100px}
@@ -181,58 +164,19 @@ textarea:focus,input:focus,select:focus{outline:none}
 .send.live{background:linear-gradient(135deg,var(--teal1),var(--teal2));color:#fff}
 .foot{max-width:660px;margin:7px auto 0;font-size:10px;color:var(--mut2);text-align:center;font-family:'DM Mono',monospace}
 
-/* calibration */
-.cal-btn{display:flex;align-items:center;gap:8px;width:100%;background:var(--panel);border:1px solid var(--line);border-radius:11px;padding:12px 14px;color:var(--mut);font-size:12px;cursor:pointer;transition:.2s;font-family:inherit;margin-top:12px;text-align:left}
-.cal-btn:hover{color:var(--txt);border-color:var(--line2)}
-.cal-btn .cal-ic{font-size:18px;flex-shrink:0}
-.cal-btn .cal-info{flex:1;min-width:0}
-.cal-btn .cal-title{font-size:12px;font-weight:500;color:var(--txt);margin-bottom:2px}
-.cal-btn .cal-sub{font-size:10px;color:var(--mut2);line-height:1.4}
-.cal-badge{font-size:9px;padding:3px 8px;border-radius:6px;font-family:'DM Mono',monospace;letter-spacing:.5px;white-space:nowrap}
-.cal-badge.active{color:var(--green);background:rgba(92,200,160,.12)}
-.cal-badge.none{color:var(--mut2);background:rgba(255,255,255,.05)}
-
-.cal-body{padding:4px 0}
-.cal-step{display:flex;align-items:flex-start;gap:12px;margin-bottom:16px}
-.cal-num{width:26px;height:26px;border-radius:50%;background:linear-gradient(135deg,var(--teal1),var(--teal2));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#fff;flex-shrink:0;margin-top:1px}
-.cal-step-text{font-size:13px;color:var(--mut);line-height:1.55}
-.cal-step-text strong{color:var(--txt);font-weight:500}
-
-.cal-photos{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
-.cal-photo{position:relative;width:72px;height:72px;border-radius:12px;overflow:hidden;border:1px solid var(--line2);flex-shrink:0}
-.cal-photo img{width:100%;height:100%;object-fit:cover}
-.cal-photo .cal-rm{position:absolute;top:3px;right:3px;width:20px;height:20px;border-radius:50%;background:rgba(0,0,0,.7);border:none;color:var(--coral);font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.2s}
-.cal-photo .cal-rm:hover{background:var(--coral);color:#fff}
-.cal-add-photo{width:72px;height:72px;border-radius:12px;border:2px dashed var(--line2);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:.2s;gap:3px;color:var(--mut)}
-.cal-add-photo:hover{border-color:var(--aqua);color:var(--aqua)}
-.cal-add-photo .plus{font-size:20px;line-height:1}
-.cal-add-photo .lbl{font-size:8px;letter-spacing:1px;text-transform:uppercase}
-
-.cal-status{display:flex;align-items:center;gap:8px;padding:11px 14px;border-radius:11px;font-size:12px;margin:12px 0}
-.cal-status.processing{background:rgba(91,198,220,.1);border:1px solid rgba(91,198,220,.2);color:var(--aqua)}
-.cal-status.success{background:rgba(92,200,160,.1);border:1px solid rgba(92,200,160,.2);color:var(--green)}
-.cal-status.error{background:rgba(236,138,114,.1);border:1px solid rgba(236,138,114,.2);color:var(--coral)}
-.cal-status .spin{width:14px;height:14px;border:2px solid var(--aqua);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
-
-.cal-preview{background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:12px;padding:14px;margin:12px 0}
-.cal-preview .cal-prev-title{font-size:10px;color:var(--mut);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:10px}
-.cal-prev-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.cal-prev-item{background:var(--panel);border-radius:8px;padding:8px 10px;border:1px solid var(--line)}
-.cal-prev-item .cpk{font-size:9px;color:var(--mut2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px}
-.cal-prev-item .cpv{font-size:12px;font-family:'DM Mono',monospace;color:var(--aqua2)}
-
 /* image attachment */
 .attach-preview{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--panel2);border:1px solid var(--line2);border-radius:13px;margin-bottom:8px;animation:fadeIn .2s}
 .attach-preview img{width:56px;height:56px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
 .attach-preview .attach-info{flex:1;min-width:0}
 .attach-preview .attach-label{font-size:12px;color:var(--txt);margin-bottom:4px}
 .attach-preview .attach-hint{font-size:10px;color:var(--mut2);line-height:1.4}
-.attach-preview .attach-actions{display:flex;gap:6px}
 .attach-preview .attach-rm{background:none;border:1px solid rgba(236,138,114,.3);color:var(--coral);border-radius:8px;padding:5px 10px;font-size:10px;cursor:pointer;font-family:inherit;transition:.2s}
 .attach-preview .attach-rm:hover{background:rgba(236,138,114,.15)}
-.attach-preview .attach-scan{background:rgba(91,198,220,.12);border:1px solid rgba(91,198,220,.25);color:var(--aqua);border-radius:8px;padding:5px 10px;font-size:10px;cursor:pointer;font-family:inherit;transition:.2s}
-.attach-preview .attach-scan:hover{background:rgba(91,198,220,.22)}
 .msg-img{max-width:220px;max-height:180px;border-radius:12px;margin-bottom:6px;border:1px solid var(--line);object-fit:cover}
+
+.gauge{position:relative;height:6px;background:rgba(255,255,255,.08);border-radius:3px;margin-top:9px}
+.gauge .ideal{position:absolute;height:100%;background:rgba(92,200,160,.22);border-radius:3px}
+.gauge .pin{position:absolute;top:-4px;width:14px;height:14px;border-radius:50%;border:2px solid var(--bg);transform:translateX(-7px)}
 </style>
 </head>
 <body>
@@ -255,8 +199,8 @@ textarea:focus,input:focus,select:focus{outline:none}
     <div class="inbarin" style="flex-direction:column;align-items:stretch">
       <div id="attachPreview"></div>
       <div style="display:flex;gap:8px;align-items:flex-end">
-      <label class="scanbtn" id="scanBtn" title="Take a photo">📷</label>
-      <label class="scanbtn" id="uploadBtn" title="Upload a photo">📁</label>
+      <label class="photobtn" id="camBtn" title="Take a photo">📷</label>
+      <label class="photobtn" id="uploadBtn" title="Upload a photo">📁</label>
       <input id="fileIn" type="file" accept="image/*" capture="environment" style="display:none">
       <input id="uploadIn" type="file" accept="image/*" style="display:none">
       <div class="txtwrap">
@@ -265,7 +209,7 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · 🔬 scan strip · Enter to send · <span style="opacity:.45">v1.4.1</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span style="opacity:.45">v1.5.0</span></div>
   </div>
 </div>
 
@@ -283,44 +227,6 @@ textarea:focus,input:focus,select:focus{outline:none}
       <button class="ghost" id="tDelete" style="display:none;flex:0 0 auto;padding-left:18px;padding-right:18px;color:var(--coral)">Delete</button>
       <button class="ghost" onclick="closeScrim('taskScrim')">Cancel</button>
       <button class="solid" id="tSave">Save</button>
-    </div>
-  </div>
-</div>
-
-<!-- calibration modal -->
-<div class="scrim" id="calScrim">
-  <div class="modal" style="max-height:92vh;overflow-y:auto">
-    <div class="grab"></div>
-    <h2>🎯 Calibrate test strips</h2>
-    <div style="font-size:12px;color:var(--mut);margin-bottom:14px;line-height:1.5">Clarity defaults to <strong style="color:var(--aqua2)">AquaChek 7-Way</strong> strips. Using a different brand? Calibrate below for accurate readings.</div>
-    <div class="cal-body">
-      <div class="cal-step">
-        <div class="cal-num">1</div>
-        <div class="cal-step-text"><strong>Find the color reference card</strong> that came with your test strips — it's usually on the bottle label or a separate insert.</div>
-      </div>
-      <div class="cal-step">
-        <div class="cal-num">2</div>
-        <div class="cal-step-text"><strong>Take or upload photos of the card.</strong> Use 📷 to snap with your camera or 📁 to pick from your files. If it wraps around the bottle, add multiple photos (up to 4).</div>
-      </div>
-      <div class="cal-step">
-        <div class="cal-num">3</div>
-        <div class="cal-step-text"><strong>Hit Calibrate</strong> and we'll map the colors to values for your specific brand so future scans are more accurate.</div>
-      </div>
-      <div class="cal-photos" id="calPhotos">
-        <label class="cal-add-photo" id="calAddBtn">
-          <span class="plus">＋</span>
-          <span class="lbl">Photo</span>
-        </label>
-      </div>
-      <input id="calFileIn" type="file" accept="image/*" capture="environment" style="display:none">
-      <input id="calUploadIn" type="file" accept="image/*" style="display:none">
-      <div id="calStatus"></div>
-      <div id="calPreview"></div>
-    </div>
-    <div class="mact">
-      <button class="ghost" id="calClearBtn" style="display:none;flex:0 0 auto;padding-left:18px;padding-right:18px;color:var(--coral)">Clear calibration</button>
-      <button class="ghost" onclick="closeScrim('calScrim')">Cancel</button>
-      <button class="solid" id="calRunBtn" style="opacity:.4;cursor:default">Calibrate</button>
     </div>
   </div>
 </div>
@@ -387,9 +293,9 @@ let S={
   gallons: store.get('gallons')||15000,
   history: store.get('history')||[],
   tasks: store.get('tasks')||defaultTasks(),
-  messages:[{role:'assistant',content:"Hi! I'm Clarity, your personal pool assistant. I can help with water chemistry, maintenance, troubleshooting and seasonal advice.\n\nI can also analyze photos — snap a picture of your pool water, equipment, algae, or anything else and I'll diagnose what I see.\n\nTap 📷 to snap a photo or 📁 to upload one. Use the Chemistry tab to log readings and get exact dosing amounts."}],
-  tab:'chat', thinking:false, scanning:false, setupOpen:false, editTask:null,
-  _pendingImage:null, // {base64, mediaType, preview}
+  messages:[{role:'assistant',content:"Hi! I'm Clarity, your personal pool assistant.\n\nSend me a photo of your test strip and I'll read the colors and tell you exactly what chemicals to add. I can also analyze photos of your pool water, equipment, algae, or anything else.\n\n📷 Snap a photo or 📁 upload one, then hit send. Or just type a question — I'm here to help with water chemistry, maintenance, troubleshooting and seasonal advice."}],
+  tab:'chat', thinking:false, setupOpen:false, editTask:null,
+  _pendingImage:null,
 };
 function defaultTasks(){
   const day=864e5, now=Date.now();
@@ -424,26 +330,15 @@ function renderSetup(){
   const el=$('setup');
   if(!S.setupOpen){el.style.display='none';return;}
   el.style.display='block';
-  const cal=store.get('calibration');
-  const calLabel=cal?`${cal.brand||'Custom'} · ${new Date(cal.timestamp).toLocaleDateString()}`:'AquaChek 7-Way (default)';
   el.innerHTML=`
     <div class="setup">
       <div class="lab">Pool size (gallons)</div>
       <div class="chips">${[8000,12000,15000,20000,25000,30000].map(g=>
         `<button class="chip ${S.gallons===g?'on':''}" data-g="${g}">${(g/1000)}k</button>`).join('')}</div>
       <div class="hint">Dosing amounts scale to your pool size. Pick the closest match.</div>
-      <button class="cal-btn" id="openCalBtn">
-        <span class="cal-ic">🎯</span>
-        <div class="cal-info">
-          <div class="cal-title">Strip calibration</div>
-          <div class="cal-sub">${esc(calLabel)}</div>
-        </div>
-        <span class="cal-badge ${cal?'active':'none'}">${cal?'Custom':'Default'}</span>
-      </button>
-      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v1.4.1</div>
+      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v1.5.0</div>
     </div>`;
   el.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{S.gallons=+c.dataset.g;persist();renderSetup();renderTabs();render()});
-  $('openCalBtn').onclick=()=>{openCalibration()};
 }
 
 function render(){
@@ -463,32 +358,14 @@ function gaugeHTML(v,k){
   return `<div class="gauge"><div class="ideal" style="left:${iL}%;width:${iW}%"></div>
     ${p!=null?`<div class="pin" style="left:${p}%;background:${c};box-shadow:0 0 8px ${c}"></div>`:''}</div>`;
 }
-function readingCardHTML(k,v){
-  const r=IDEAL[k],c=color(v,k),st=statusOf(v,k);
-  return `<div class="rc" style="border-color:${v!=null?c+'33':'var(--line)'}">
-    <div class="k">${r.label}</div>
-    <div class="vr"><span class="v" style="color:${v!=null?c:'rgba(255,255,255,.15)'}">${v??'–'}</span>
-      <span class="un mono">${r.unit}</span>
-      ${st?`<span class="st mono" style="color:${c};background:${c}18">${st}</span>`:''}</div>
-    ${gaugeHTML(v,k)}</div>`;
-}
 
 function renderChat(b){
-  const quick=["How often should I test my water?","My water looks cloudy — what do I check?","How do I shock my pool?","What can you tell from a photo of my pool?"];
+  const quick=["How often should I test my water?","My water looks cloudy — what do I check?","How do I shock my pool?","Send me a photo of your test strip and I'll read it"];
   let html='<div class="bin">';
   S.messages.forEach(m=>{
-    if(m.type==='scan'){
-      const issues=KEYS.filter(k=>{const v=m.readings[k],r=IDEAL[k];return v!=null&&(v<r.min||v>r.max)});
-      html+=`<div class="msg"><div class="scan"><div class="h mono">📊 Test Strip Results</div>
-        <div class="rgrid">${KEYS.map(k=>readingCardHTML(k,m.readings[k])).join('')}</div>
-        ${issues.length===0?`<div class="mono" style="color:var(--green);font-size:12px">✓ All levels within ideal range</div>`
-          :`<div class="mono" style="color:var(--coral);font-size:12px">⚠ ${issues.length} level${issues.length>1?'s':''} need attention</div>`}
-      </div></div>`;
-    } else {
-      const u=m.role==='user';
-      const imgHtml=m._image?`<img class="msg-img" src="${m._image}">`:'';
-      html+=`<div class="msg ${u?'u':''}">${u?'':`<div class="av">${AV}</div>`}<div class="bub ${u?'u':'a'}">${imgHtml}${esc(m.content)}</div></div>`;
-    }
+    const u=m.role==='user';
+    const imgHtml=m._image?`<img class="msg-img" src="${m._image}">`:'';
+    html+=`<div class="msg ${u?'u':''}">${u?'':`<div class="av">${AV}</div>`}<div class="bub ${u?'u':'a'}">${imgHtml}${esc(m.content)}</div></div>`;
   });
   if(S.thinking)html+=`<div class="msg"><div class="av">${AV}</div><div class="dots"><i style="animation-delay:0s"></i><i style="animation-delay:.2s"></i><i style="animation-delay:.4s"></i></div></div>`;
   if(S.messages.length===1&&!S.thinking){
@@ -506,7 +383,7 @@ function renderChem(b){
   let html=`<div class="bin"><div class="formcard">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:15px">
       <h3 style="margin:0">🧪 Enter your readings</h3>
-      <button class="add" id="pullBtn" style="padding:6px 11px;font-size:11.5px${last?'':';opacity:.4;cursor:default;border-color:var(--line)'}" ${last?'':'title="No saved tests yet — scan a strip or save a reading first"'}>↧ Last test</button>
+      <button class="add" id="pullBtn" style="padding:6px 11px;font-size:11.5px${last?'':';opacity:.4;cursor:default;border-color:var(--line)'}" ${last?'':'title="No saved tests yet"'}>↧ Last test</button>
     </div>`;
   KEYS.forEach(k=>{
     const i=IDEAL[k];
@@ -541,7 +418,7 @@ function renderChem(b){
 function renderHistory(b){
   if(!S.history.length){b.innerHTML=`<div class="bin"><div class="empty"><div class="e">📋</div>
     <div class="mono" style="letter-spacing:1px;text-transform:uppercase;font-size:12px">No tests yet</div>
-    <div style="font-size:12px;margin-top:6px">Scan a strip or log readings in Chemistry</div></div></div>`;return;}
+    <div style="font-size:12px;margin-top:6px">Log readings in the Chemistry tab</div></div></div>`;return;}
   let html=`<div class="bin"><div class="mono" style="font-size:10px;color:var(--mut2);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">${S.history.length} test${S.history.length>1?'s':''} recorded</div>`;
   S.history.forEach(e=>{
     const d=new Date(e.timestamp);
@@ -655,44 +532,41 @@ function logReading(read){
   persist();
 }
 
-const MODEL='claude-sonnet-4-6';  // Opus: claude-opus-4-6 · Haiku: claude-haiku-4-5-20251001
-const SCAN_MODEL='claude-haiku-4-5-20251001'; // cheaper model for strip JSON extraction
-const SYSTEM=`You are Clarity, a friendly knowledgeable personal pool assistant for an inground pool owner.
+/* ── API ── */
+const MODEL='claude-sonnet-4-6';
 
-CRITICAL: You are a VISION-CAPABLE multimodal AI. When a user's message includes an image, you CAN and MUST analyze it. Never say you cannot see images, cannot process photos, or are a text-only assistant — that is false. If an image is attached to the user's message, describe what you see and give actionable advice.
+const SYSTEM=`You are Clarity, a friendly, knowledgeable personal pool assistant for an inground pool owner.
 
-You can identify: pool water color and clarity issues, algae types and growth patterns, equipment problems, chemical products and labels, test strip readings, filter/pump conditions, liner or surface damage, and general pool conditions. Describe what you see, diagnose problems, and give specific actionable advice. Also help with water chemistry & balancing, maintenance schedules, troubleshooting, chemical dosing, and seasonal advice. Be specific, practical and concise. Today is ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}.`;
-const STRIP_PROMPT_BASE=`You are Clarity. Analyze this pool test strip photo and estimate values from pad colors. The DEFAULT strip brand is AquaChek 7-Way (Aqua 7). Use these known value scales for AquaChek 7-Way strips unless the user has calibrated a different brand:
+CRITICAL — VISION CAPABILITY:
+You are a VISION-CAPABLE multimodal AI. When the user's message includes an image, you CAN and MUST analyze it. Never say you cannot see images, cannot process photos, or are a text-only assistant — that is FALSE. You have full image analysis capabilities.
 
-- Free Chlorine (ppm): 0, 0.5, 1, 3, 5, 10
-- Total Chlorine (ppm): 0, 0.5, 1, 3, 5, 10
-- pH: 6.2, 6.8, 7.2, 7.8, 8.4
-- Total Alkalinity (ppm): 0, 40, 80, 120, 180, 240
-- Calcium Hardness (ppm): 0, 25, 50, 120, 250, 425, 1000
-- Cyanuric Acid (ppm): 0, 30, 50, 100, 150, 300
+WHEN THE USER SENDS A TEST STRIP PHOTO:
+You are an expert pool chemistry analyzer. Look at the test strip closely. Compare the pad colors to standard pool test strip scales. For each parameter you can identify (Free Chlorine, Total Chlorine, pH, Total Alkalinity, Calcium Hardness, Cyanuric Acid / Stabilizer), provide:
+1. The estimated reading (with unit)
+2. Whether it is LOW, OK, or HIGH relative to ideal ranges
+3. If out of range: exactly what chemical to add (and how much for a ~${'{POOL_SIZE}'} gallon pool)
 
-Pad order on the strip (bottom to top): Total Hardness, Free Chlorine, Total Chlorine, pH, Total Alkalinity, Cyanuric Acid.
+Ideal ranges for reference:
+- Free Chlorine: 1–3 ppm
+- Total Chlorine: 1–3 ppm (combined chlorine = total − free should be < 0.5)
+- pH: 7.2–7.6
+- Total Alkalinity: 80–120 ppm
+- Calcium Hardness: 200–400 ppm
+- Cyanuric Acid: 30–50 ppm
 
-Match each pad color to the closest value on the scale above. Always give a number for every field. Respond ONLY with JSON: {"chlorine":<free chlorine n>,"totalChlorine":<total chlorine n>,"ph":<n>,"alkalinity":<n>,"hardness":<n>,"cyanuric":<n>,"notes":"brief"}`;
-function getStripPrompt(){
-  const cal=store.get('calibration');
-  if(!cal||!cal.mapping)return STRIP_PROMPT_BASE;
-  return STRIP_PROMPT_BASE.replace(/The DEFAULT strip brand is AquaChek 7-Way.*?Cyanuric Acid\.\n/s,
-    '')+`\n\nIMPORTANT: The user has calibrated their test strips. IGNORE the default AquaChek values. Use this reference color-to-value mapping from their specific brand (${cal.brand||'unknown'}) to interpret pad colors:\n${JSON.stringify(cal.mapping)}\nMatch the strip pad colors against these calibrated reference values.`;
-}
+Be direct and specific. Give actual chemical amounts, not vague advice. Example: "Add 6 oz of muriatic acid" not "add some acid."
 
-const CAL_PROMPT=`You are Clarity. The user is showing you the color reference card/chart from their pool test strip bottle or packaging. This card shows what colors correspond to what chemical values.
+WHEN THE USER SENDS OTHER POOL PHOTOS:
+You can identify pool water color/clarity issues, algae types, equipment problems, chemical product labels, filter/pump conditions, liner or surface damage, and general pool conditions. Describe what you see and give specific actionable advice.
 
-Extract the brand name and the complete color-to-value mapping for every parameter shown. Each parameter will have multiple color blocks, each representing a specific value.
+GENERAL POOL QUESTIONS:
+Help with water chemistry & balancing, maintenance schedules, troubleshooting, chemical dosing, and seasonal advice. Be specific, practical, and concise.
 
-Respond ONLY with JSON in this format:
-{"brand":"<brand name>","mapping":{"chlorine":{"values":[0,0.5,1,2,3,5,10],"colors":["yellow","light green","green","dark green",...]},"totalChlorine":{"values":[...],"colors":[...]},"ph":{"values":[...],"colors":[...]},"alkalinity":{"values":[...],"colors":[...]},"hardness":{"values":[...],"colors":[...]},"cyanuric":{"values":[...],"colors":[...]}}}
+Today is ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}.`;
 
-If a parameter isn't visible in this photo, set its value to null. Include exact numeric values from the card. Describe colors precisely (e.g. "pale pink", "deep magenta", "olive green").`;
-
-const MAX_HISTORY_MSGS=10;  // max message pairs sent to API
-const DAILY_LIMIT=30;       // max API calls per day
-const COOLDOWN_MS=3000;     // min ms between API calls
+const MAX_HISTORY_MSGS=10;
+const DAILY_LIMIT=30;
+const COOLDOWN_MS=3000;
 let lastCallTime=0;
 
 function checkUsage(){
@@ -727,12 +601,12 @@ async function sendMessage(text){
   const hasText=!!text;
   if(!hasImage&&!hasText)return;
   if(Date.now()-lastCallTime<COOLDOWN_MS)return;
-  const msgText=text||(hasImage?'What do you see in this image? Analyze it as a pool expert.':'');
+  const msgText=text||(hasImage?'Please analyze this image as a pool expert.':'');
   const msg={role:'user',content:msgText};
   let imageData=null;
   if(hasImage){
     imageData={base64:S._pendingImage.base64,mediaType:S._pendingImage.mediaType,preview:S._pendingImage.preview};
-    msg._image=imageData.preview; // for display in chat
+    msg._image=imageData.preview;
     S._pendingImage=null;
     renderAttachPreview();
   }
@@ -741,13 +615,11 @@ async function sendMessage(text){
   $('sendBtn').className='send';
   S.thinking=true;render();
   try{
-    // Build API messages — include image in the latest user message if present
     const raw=[];
-    const filtered=S.messages.filter(m=>m.role==='user'||(m.role==='assistant'&&!m.type));
+    const filtered=S.messages.filter(m=>m.role==='user'||m.role==='assistant');
     const recent=filtered.slice(-MAX_HISTORY_MSGS);
-    recent.forEach((m,i)=>{
+    recent.forEach(m=>{
       if(m===msg&&imageData){
-        // This is the current message with an image — send as multimodal content
         raw.push({role:'user',content:[
           {type:'image',source:{type:'base64',media_type:imageData.mediaType,data:imageData.base64}},
           {type:'text',text:msgText}
@@ -756,19 +628,19 @@ async function sendMessage(text){
         raw.push({role:m.role,content:m.content});
       }
     });
-    // Sanitize: must start with 'user' and strictly alternate roles (API requirement)
+    // Sanitize: must start with 'user' and strictly alternate roles
     const api=[];
     for(const m of raw){
-      if(api.length===0&&m.role!=='user') continue; // skip leading assistant msgs
+      if(api.length===0&&m.role!=='user') continue;
       if(api.length>0&&api[api.length-1].role===m.role){
-        // merge consecutive same-role: keep last (most recent) content
         api[api.length-1]=m;
         continue;
       }
       api.push(m);
     }
-    const reply=await callClaude({model:MODEL,max_tokens:1200,
-      system:SYSTEM+`\nUser's pool: inground, ~${S.gallons.toLocaleString()} gallons.`,messages:api});
+    const systemPrompt=SYSTEM.replace('{POOL_SIZE}',S.gallons.toLocaleString());
+    const reply=await callClaude({model:MODEL,max_tokens:1500,
+      system:systemPrompt+`\nUser's pool: inground, ~${S.gallons.toLocaleString()} gallons.`,messages:api});
     S.messages.push({role:'assistant',content:reply});
   }catch(e){S.messages.push({role:'assistant',content:`⚠ ${e.message}`});}
   S.thinking=false;render();
@@ -785,42 +657,6 @@ function compressImage(file,maxW=900){
   });
 }
 
-async function scanStrip(file){
-  if(!file||!file.type.startsWith('image/'))return;
-  S.scanning=true;S.thinking=true;S.tab='chat';render();updateScanBtn();
-  try{
-    const {base64,mediaType}=await compressImage(file);
-    const raw=await callClaude({model:SCAN_MODEL,max_tokens:300,
-      messages:[{role:'user',content:[{type:'image',source:{type:'base64',media_type:mediaType,data:base64}},{type:'text',text:getStripPrompt()}]}]});
-    const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
-    const readings={};KEYS.forEach(k=>readings[k]=parsed[k]??null);
-    S.messages.push({role:'assistant',type:'scan',readings});
-    logReading(readings);
-    // Use local dosing engine instead of a second API call
-    const doses=doseAdvice(readings,S.gallons);
-    let advice;
-    if(doses.length===0){
-      advice="✨ Great news — all your levels are within the ideal range. No chemicals needed right now. Keep up the routine!";
-    } else {
-      advice="Here's what I'd recommend based on your strip results (for "+S.gallons.toLocaleString()+" gallons):\n\n"+
-        doses.map(d=>`▸ ${d.nm}: ${d.amt}\n  ${d.ex}`).join('\n\n');
-    }
-    if(parsed.notes)advice+="\n\n📝 "+parsed.notes;
-    const calData=store.get('calibration');
-    if(calData)advice+="\n\n🎯 Using "+calData.brand+" strip calibration.";
-    else advice+="\n\n🎯 Read as AquaChek 7-Way (default). Using different strips? Calibrate in ⚙ settings.";
-    S.messages.push({role:'assistant',content:advice});
-  }catch(e){S.messages.push({role:'assistant',content:`⚠ Couldn't read that strip: ${e.message}`});}
-  S.scanning=false;S.thinking=false;render();updateScanBtn();
-}
-function updateScanBtn(){
-  const el=$('scanBtn'), ul=$('uploadBtn');
-  el.className='scanbtn'+(S.scanning?' busy':'');
-  el.innerHTML=S.scanning?'<div class="spin"></div>':'📷';
-  ul.className='scanbtn'+(S.scanning?' busy':'');
-  ul.innerHTML=S.scanning?'<div class="spin"></div>':'📁';
-}
-
 async function attachImage(file){
   if(!file||!file.type.startsWith('image/'))return;
   const {base64,mediaType}=await compressImage(file);
@@ -835,172 +671,30 @@ function renderAttachPreview(){
   el.innerHTML=`<div class="attach-preview">
     <img src="${S._pendingImage.preview}">
     <div class="attach-info">
-      <div class="attach-label">📎 Image attached</div>
-      <div class="attach-hint">Type a question or send as-is. Or quick-scan as a test strip.</div>
+      <div class="attach-label">📎 Photo attached</div>
+      <div class="attach-hint">Type a question about what you see, or just hit send and I'll analyze it.</div>
     </div>
-    <div class="attach-actions">
-      <button class="attach-scan" id="attachScanBtn">🔬 Scan strip</button>
-      <button class="attach-rm" id="attachRmBtn">✕</button>
-    </div>
+    <button class="attach-rm" id="attachRmBtn">✕</button>
   </div>`;
   $('attachRmBtn').onclick=()=>{
     if(S._pendingImage?.preview)URL.revokeObjectURL(S._pendingImage.preview);
     S._pendingImage=null;renderAttachPreview();
   };
-  $('attachScanBtn').onclick=()=>{
-    const file=S._pendingImage.file;
-    S._pendingImage=null;renderAttachPreview();
-    scanStrip(file);
-  };
-  // update send button
   $('sendBtn').className='send live';
 }
 
+/* ── Event wiring ── */
 $('gearBtn').onclick=()=>{S.setupOpen=!S.setupOpen;renderSetup()};
 $('sendBtn').onclick=()=>{const v=$('msgIn').value.trim();if(v||S._pendingImage)sendMessage(v)};
 $('msgIn').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();const v=$('msgIn').value.trim();if(v||S._pendingImage)sendMessage(v)}});
 $('msgIn').addEventListener('input',e=>{const live=(e.target.value.trim()||S._pendingImage)&&!S.thinking;$('sendBtn').className='send'+(live?' live':'')});
-$('scanBtn').onclick=()=>$('fileIn').click();
+$('camBtn').onclick=()=>$('fileIn').click();
 $('uploadBtn').onclick=()=>$('uploadIn').click();
 $('fileIn').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(f)attachImage(f);};
 $('uploadIn').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(f)attachImage(f);};
 $('tSave').onclick=saveTask;
 $('tDelete').onclick=()=>{if(S.editTask&&confirm('Delete this task?')){S.tasks=S.tasks.filter(x=>x.id!==S.editTask);persist();closeScrim('taskScrim');render();}};
 $('taskScrim').onclick=e=>{if(e.target.id==='taskScrim')closeScrim('taskScrim')};
-$('calScrim').onclick=e=>{if(e.target.id==='calScrim')closeScrim('calScrim')};
-
-// ── Calibration ──
-let calPhotos=[]; // [{file,base64,mediaType,preview}]
-let calProcessing=false;
-
-function openCalibration(){
-  calPhotos=[];
-  calProcessing=false;
-  $('calScrim').classList.add('on');
-  renderCalUI();
-  const cal=store.get('calibration');
-  if(cal){
-    $('calClearBtn').style.display='block';
-    renderCalPreview(cal);
-  } else {
-    $('calClearBtn').style.display='none';
-    $('calPreview').innerHTML='';
-  }
-}
-
-function renderCalUI(){
-  const cont=$('calPhotos');
-  let html='';
-  calPhotos.forEach((p,i)=>{
-    html+=`<div class="cal-photo"><img src="${p.preview}"><button class="cal-rm" data-idx="${i}">✕</button></div>`;
-  });
-  if(calPhotos.length<4){
-    html+=`<label class="cal-add-photo" id="calCamInner"><span class="plus">📷</span><span class="lbl">Camera</span></label>`;
-    html+=`<label class="cal-add-photo" id="calUpInner"><span class="plus">📁</span><span class="lbl">Upload</span></label>`;
-  }
-  cont.innerHTML=html;
-  // wire remove buttons
-  cont.querySelectorAll('.cal-rm').forEach(btn=>btn.onclick=e=>{
-    e.stopPropagation();
-    calPhotos.splice(+btn.dataset.idx,1);
-    renderCalUI();
-  });
-  // wire add buttons
-  const camBtn=document.getElementById('calCamInner');
-  if(camBtn)camBtn.onclick=()=>$('calFileIn').click();
-  const upBtn=document.getElementById('calUpInner');
-  if(upBtn)upBtn.onclick=()=>$('calUploadIn').click();
-  // update run button state
-  const run=$('calRunBtn');
-  if(calPhotos.length>0&&!calProcessing){
-    run.style.opacity='1';run.style.cursor='pointer';
-  } else {
-    run.style.opacity='.4';run.style.cursor='default';
-  }
-}
-
-$('calFileIn').onchange=async e=>{
-  const file=e.target.files[0];
-  e.target.value='';
-  if(!file||!file.type.startsWith('image/')||calPhotos.length>=4)return;
-  const {base64,mediaType}=await compressImage(file,1200);
-  const preview=URL.createObjectURL(file);
-  calPhotos.push({file,base64,mediaType,preview});
-  renderCalUI();
-};
-
-$('calUploadIn').onchange=async e=>{
-  const file=e.target.files[0];
-  e.target.value='';
-  if(!file||!file.type.startsWith('image/')||calPhotos.length>=4)return;
-  const {base64,mediaType}=await compressImage(file,1200);
-  const preview=URL.createObjectURL(file);
-  calPhotos.push({file,base64,mediaType,preview});
-  renderCalUI();
-};
-
-$('calRunBtn').onclick=async()=>{
-  if(calPhotos.length===0||calProcessing)return;
-  calProcessing=true;
-  renderCalUI();
-  $('calStatus').innerHTML=`<div class="cal-status processing"><div class="spin"></div>Analyzing ${calPhotos.length} photo${calPhotos.length>1?'s':''} — this may take a moment…</div>`;
-  $('calPreview').innerHTML='';
-  try{
-    // Build message content with all photos
-    const content=[];
-    calPhotos.forEach((p,i)=>{
-      content.push({type:'image',source:{type:'base64',media_type:p.mediaType,data:p.base64}});
-      if(calPhotos.length>1)content.push({type:'text',text:`[Photo ${i+1} of ${calPhotos.length}]`});
-    });
-    const multiNote=calPhotos.length>1?`\n\nThe user has sent ${calPhotos.length} photos of the same reference card (it may wrap around a bottle). Combine information from ALL photos into one complete mapping. If the same parameter appears in multiple photos, use the clearest one.`:'';
-    content.push({type:'text',text:CAL_PROMPT+multiNote});
-
-    const raw=await callClaude({model:MODEL,max_tokens:1200,messages:[{role:'user',content}]});
-    const parsed=JSON.parse(raw.replace(/```json|```/g,'').trim());
-    if(!parsed.mapping)throw new Error('No mapping data found in the response.');
-
-    // Save calibration
-    const calData={brand:parsed.brand||'Custom',mapping:parsed.mapping,timestamp:Date.now(),photoCount:calPhotos.length};
-    store.set('calibration',calData);
-
-    $('calStatus').innerHTML=`<div class="cal-status success">✓ Calibrated for ${esc(calData.brand)} strips</div>`;
-    $('calClearBtn').style.display='block';
-    renderCalPreview(calData);
-    renderSetup();
-  }catch(e){
-    $('calStatus').innerHTML=`<div class="cal-status error">⚠ ${esc(e.message)}</div>`;
-  }
-  calProcessing=false;
-  renderCalUI();
-};
-
-$('calClearBtn').onclick=()=>{
-  if(confirm('Remove calibration? Scans will use default interpretation.')){
-    store.del('calibration');
-    $('calStatus').innerHTML='';
-    $('calPreview').innerHTML='';
-    $('calClearBtn').style.display='none';
-    renderSetup();
-  }
-};
-
-function renderCalPreview(cal){
-  if(!cal||!cal.mapping){$('calPreview').innerHTML='';return;}
-  const m=cal.mapping;
-  let html=`<div class="cal-preview"><div class="cal-prev-title">${esc(cal.brand)} · ${cal.photoCount||1} photo${(cal.photoCount||1)>1?'s':''} · calibrated ${new Date(cal.timestamp).toLocaleDateString()}</div><div class="cal-prev-grid">`;
-  const paramLabels={chlorine:'Free Chlorine',totalChlorine:'Total Chlorine',ph:'pH',alkalinity:'Alkalinity',hardness:'Hardness',cyanuric:'CYA'};
-  for(const[k,label] of Object.entries(paramLabels)){
-    const d=m[k];
-    if(d&&d.values){
-      const range=d.values;
-      html+=`<div class="cal-prev-item"><div class="cpk">${label}</div><div class="cpv">${range[0]}–${range[range.length-1]}${k==='ph'?'':' ppm'} · ${range.length} levels</div></div>`;
-    } else {
-      html+=`<div class="cal-prev-item"><div class="cpk">${label}</div><div class="cpv" style="color:var(--mut2)">Not detected</div></div>`;
-    }
-  }
-  html+='</div></div>';
-  $('calPreview').innerHTML=html;
-}
 
 render();
 </script>
