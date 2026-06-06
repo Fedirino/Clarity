@@ -4,6 +4,18 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [1.4.1] — 2026-06-05
+
+### Fixed
+- **"I can't see images" bug** — Root cause: the API `messages` array could start with an `assistant` role (the welcome message) and contain consecutive same-role messages (after filtering out `type:'scan'` results). The Anthropic API requires messages to start with `user` and strictly alternate roles. Added a sanitizer that skips leading assistant messages and merges consecutive same-role messages before sending.
+- **System prompt hardened** — Rewrote the vision declaration from a passing mention ("You have VISION") to a `CRITICAL` block that explicitly forbids the model from denying vision capability. Added "Never say you cannot see images" anti-hallucination instruction.
+
+### Changed
+- Version bumped from 1.4.0 → 1.4.1 in footer and settings.
+- Old version archived as `old-v1.4.0.html`.
+
+---
+
 ## [1.4.0] — 2026-06-05
 
 ### Added

@@ -265,7 +265,7 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · 🔬 scan strip · Enter to send · <span style="opacity:.45">v1.4.0</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · 🔬 scan strip · Enter to send · <span style="opacity:.45">v1.4.1</span></div>
   </div>
 </div>
 
@@ -440,7 +440,7 @@ function renderSetup(){
         </div>
         <span class="cal-badge ${cal?'active':'none'}">${cal?'Custom':'Default'}</span>
       </button>
-      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v1.4.0</div>
+      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v1.4.1</div>
     </div>`;
   el.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{S.gallons=+c.dataset.g;persist();renderSetup();renderTabs();render()});
   $('openCalBtn').onclick=()=>{openCalibration()};
@@ -657,7 +657,11 @@ function logReading(read){
 
 const MODEL='claude-sonnet-4-6';  // Opus: claude-opus-4-6 · Haiku: claude-haiku-4-5-20251001
 const SCAN_MODEL='claude-haiku-4-5-20251001'; // cheaper model for strip JSON extraction
-const SYSTEM=`You are Clarity, a friendly knowledgeable personal pool assistant for an inground pool owner. You have VISION — when a user sends a photo you can see and analyze it. You can identify: pool water color and clarity issues, algae types and growth patterns, equipment problems, chemical products and labels, test strip readings, filter/pump conditions, liner or surface damage, and general pool conditions. Describe what you see, diagnose problems, and give specific actionable advice. Also help with water chemistry & balancing, maintenance schedules, troubleshooting, chemical dosing, and seasonal advice. Be specific, practical and concise. Today is ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}.`;
+const SYSTEM=`You are Clarity, a friendly knowledgeable personal pool assistant for an inground pool owner.
+
+CRITICAL: You are a VISION-CAPABLE multimodal AI. When a user's message includes an image, you CAN and MUST analyze it. Never say you cannot see images, cannot process photos, or are a text-only assistant — that is false. If an image is attached to the user's message, describe what you see and give actionable advice.
+
+You can identify: pool water color and clarity issues, algae types and growth patterns, equipment problems, chemical products and labels, test strip readings, filter/pump conditions, liner or surface damage, and general pool conditions. Describe what you see, diagnose problems, and give specific actionable advice. Also help with water chemistry & balancing, maintenance schedules, troubleshooting, chemical dosing, and seasonal advice. Be specific, practical and concise. Today is ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}.`;
 const STRIP_PROMPT_BASE=`You are Clarity. Analyze this pool test strip photo and estimate values from pad colors. The DEFAULT strip brand is AquaChek 7-Way (Aqua 7). Use these known value scales for AquaChek 7-Way strips unless the user has calibrated a different brand:
 
 - Free Chlorine (ppm): 0, 0.5, 1, 3, 5, 10
@@ -738,20 +742,31 @@ async function sendMessage(text){
   S.thinking=true;render();
   try{
     // Build API messages — include image in the latest user message if present
-    const api=[];
+    const raw=[];
     const filtered=S.messages.filter(m=>m.role==='user'||(m.role==='assistant'&&!m.type));
     const recent=filtered.slice(-MAX_HISTORY_MSGS);
     recent.forEach((m,i)=>{
       if(m===msg&&imageData){
         // This is the current message with an image — send as multimodal content
-        api.push({role:'user',content:[
+        raw.push({role:'user',content:[
           {type:'image',source:{type:'base64',media_type:imageData.mediaType,data:imageData.base64}},
           {type:'text',text:msgText}
         ]});
       } else {
-        api.push({role:m.role,content:m.content});
+        raw.push({role:m.role,content:m.content});
       }
     });
+    // Sanitize: must start with 'user' and strictly alternate roles (API requirement)
+    const api=[];
+    for(const m of raw){
+      if(api.length===0&&m.role!=='user') continue; // skip leading assistant msgs
+      if(api.length>0&&api[api.length-1].role===m.role){
+        // merge consecutive same-role: keep last (most recent) content
+        api[api.length-1]=m;
+        continue;
+      }
+      api.push(m);
+    }
     const reply=await callClaude({model:MODEL,max_tokens:1200,
       system:SYSTEM+`\nUser's pool: inground, ~${S.gallons.toLocaleString()} gallons.`,messages:api});
     S.messages.push({role:'assistant',content:reply});
