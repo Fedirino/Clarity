@@ -35,7 +35,7 @@ Open it in a browser to run it.
 index.html                     ← the full app
 netlify.toml                   ← Netlify config (function path + bundler)
 netlify/functions/claude.js    ← serverless proxy (keeps API key safe)
-old-v1.3.0.html                ← archived previous version
+old-v1.3.1.html                ← archived previous version
 README.md
 CHANGELOG.md
 ```
@@ -44,7 +44,9 @@ CHANGELOG.md
 
 ## What it does (current features)
 
-- **Chat tab** — AI pool assistant (Anthropic API, model `claude-sonnet-4-6`).
+- **Chat tab** — AI pool assistant (Anthropic API, model `claude-sonnet-4-6`)
+  with **vision**. Attach a photo via 📷 or 📁 and ask about pool water,
+  equipment, algae, or anything else — Clarity analyzes the image and responds.
   Suggested-question chips on first load.
 - **Chemistry tab** — enter 6 readings (Free Chlorine, Total Chlorine, pH,
   Total Alkalinity, Calcium Hardness, Cyanuric Acid) and get exact chemical
@@ -91,6 +93,10 @@ stored only as a Netlify environment variable.
 - `render()` → `renderChat / renderChem / renderHistory / renderSchedule`.
 - `callClaude(body)` — POSTs to `/.netlify/functions/claude`, which proxies to
   Anthropic. The API key is a server-side environment variable.
+- `sendMessage(text)` — sends a chat message, optionally with an attached image
+  in multimodal (vision) format.
+- `attachImage(file)` / `renderAttachPreview()` — image attachment flow for
+  general chat; shows preview with option to remove or quick-scan as strip.
 - `scanStrip(file)` — compresses the image, sends it to vision, parses JSON.
 - `openCalibration()` / `renderCalUI()` — multi-photo calibration flow for
   strip reference cards; stores brand + color-to-value mapping.

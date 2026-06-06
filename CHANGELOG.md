@@ -4,19 +4,24 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
-## [1.3.1] — 2026-06-05
+## [1.4.0] — 2026-06-05
 
-### Fixed
-- **Serverless function rewritten** using Node.js built-in `https` module instead of `fetch` — guaranteed to work on all Netlify Node.js versions (16, 18, 20).
-- **Handles base64-encoded request bodies** — Netlify sometimes base64-encodes `event.body`; function now detects and decodes correctly.
-- **Added `netlify.toml`** — explicitly tells Netlify where to find the function directory and which bundler to use. Prevents "function not found" issues.
-- **25-second request timeout** on the API call — prevents the function from hanging if Anthropic is slow.
-- **Better frontend diagnostics** — `callClaude()` now gives specific error messages for 404 (function not deployed), network errors (testing locally), and non-JSON responses.
-- **Upload button in calibration** — 📷 Camera and 📁 Upload side by side so users can pick from their gallery instead of only using the camera.
+### Added
+- **Image analysis in chat** — 📷/📁 buttons now attach photos to your chat message instead of only scanning strips. Ask questions about pool water color, algae, equipment, chemical labels, or anything else and Clarity will analyze the image and respond.
+- **Attach preview bar** — shows a thumbnail of the attached image with options to remove it or quick-scan it as a test strip (🔬 Scan strip).
+- Images are displayed inline in chat message bubbles.
+- Updated system prompt gives the AI full vision awareness: it now knows it can see and analyze pool photos.
+- New suggested question: "What can you tell from a photo of my pool?"
 
 ### Changed
-- Version bumped from 1.3.0 → 1.3.1.
-- Old version archived as `old-v1.3.0.html`.
+- 📷/📁 buttons now attach an image for chat; strip scanning is accessed via the 🔬 button on the attachment preview.
+- Welcome message updated to mention photo analysis capabilities.
+- Chat max_tokens raised from 800 → 1200 for richer image analysis responses.
+- Version bumped from 1.3.1 → 1.4.0 in footer and settings.
+- Old version archived as `old-v1.3.1.html`.
+
+### Fixed
+- AI no longer says "I'm a text-based AI assistant" when sent images — the system prompt now explicitly declares vision capability and the image is sent in the correct multimodal format.
 
 ---
 
