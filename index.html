@@ -209,7 +209,7 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span style="opacity:.45">v1.5.0</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span style="opacity:.45">v1.5.1</span></div>
   </div>
 </div>
 
@@ -336,7 +336,7 @@ function renderSetup(){
       <div class="chips">${[8000,12000,15000,20000,25000,30000].map(g=>
         `<button class="chip ${S.gallons===g?'on':''}" data-g="${g}">${(g/1000)}k</button>`).join('')}</div>
       <div class="hint">Dosing amounts scale to your pool size. Pick the closest match.</div>
-      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v1.5.0</div>
+      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v1.5.1</div>
     </div>`;
   el.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{S.gallons=+c.dataset.g;persist();renderSetup();renderTabs();render()});
 }
@@ -365,7 +365,8 @@ function renderChat(b){
   S.messages.forEach(m=>{
     const u=m.role==='user';
     const imgHtml=m._image?`<img class="msg-img" src="${m._image}">`:'';
-    html+=`<div class="msg ${u?'u':''}">${u?'':`<div class="av">${AV}</div>`}<div class="bub ${u?'u':'a'}">${imgHtml}${esc(m.content)}</div></div>`;
+    const sentBadge=m._imageSize?`<div style="font-size:9px;color:var(--green);margin-top:4px;font-family:'DM Mono',monospace">📷 Image sent (${Math.round(m._imageSize/1024)}KB)</div>`:'';
+    html+=`<div class="msg ${u?'u':''}">${u?'':`<div class="av">${AV}</div>`}<div class="bub ${u?'u':'a'}">${imgHtml}${esc(m.content)}${sentBadge}</div></div>`;
   });
   if(S.thinking)html+=`<div class="msg"><div class="av">${AV}</div><div class="dots"><i style="animation-delay:0s"></i><i style="animation-delay:.2s"></i><i style="animation-delay:.4s"></i></div></div>`;
   if(S.messages.length===1&&!S.thinking){
@@ -537,16 +538,19 @@ const MODEL='claude-sonnet-4-6';
 
 const SYSTEM=`You are Clarity, a friendly, knowledgeable personal pool assistant for an inground pool owner.
 
-CRITICAL — VISION CAPABILITY:
-You are a VISION-CAPABLE multimodal AI. When the user's message includes an image, you CAN and MUST analyze it. Never say you cannot see images, cannot process photos, or are a text-only assistant — that is FALSE. You have full image analysis capabilities.
+CRITICAL — IMAGE RULES:
+You have vision capability and can analyze images when they are attached to the user's message. However:
+- NEVER fabricate, invent, or guess test strip readings. If you do not see an actual image in the current message, tell the user: "I don't see an image attached. Tap 📷 or 📁 to attach a photo, then send it." Do NOT make up readings.
+- NEVER claim to see an image that isn't there. If the message is text-only, treat it as text-only.
+- When an image IS attached, analyze it carefully and honestly. If the image is blurry or you can't confidently read a pad color, say so — give a range or say "unclear" rather than guessing a precise value.
 
-WHEN THE USER SENDS A TEST STRIP PHOTO:
+WHEN YOU CAN SEE A TEST STRIP IMAGE:
 You are an expert pool chemistry analyzer. Look at the test strip closely. Compare the pad colors to standard pool test strip scales. For each parameter you can identify (Free Chlorine, Total Chlorine, pH, Total Alkalinity, Calcium Hardness, Cyanuric Acid / Stabilizer), provide:
-1. The estimated reading (with unit)
+1. Your estimated reading (with unit) — give a range if uncertain (e.g. "1–3 ppm")
 2. Whether it is LOW, OK, or HIGH relative to ideal ranges
 3. If out of range: exactly what chemical to add (and how much for a ~${'{POOL_SIZE}'} gallon pool)
 
-Ideal ranges for reference:
+Ideal ranges:
 - Free Chlorine: 1–3 ppm
 - Total Chlorine: 1–3 ppm (combined chlorine = total − free should be < 0.5)
 - pH: 7.2–7.6
@@ -554,12 +558,12 @@ Ideal ranges for reference:
 - Calcium Hardness: 200–400 ppm
 - Cyanuric Acid: 30–50 ppm
 
-Be direct and specific. Give actual chemical amounts, not vague advice. Example: "Add 6 oz of muriatic acid" not "add some acid."
+Be direct and specific with dosing. Give actual chemical amounts: "Add 6 oz of muriatic acid" not "add some acid."
 
-WHEN THE USER SENDS OTHER POOL PHOTOS:
-You can identify pool water color/clarity issues, algae types, equipment problems, chemical product labels, filter/pump conditions, liner or surface damage, and general pool conditions. Describe what you see and give specific actionable advice.
+WHEN YOU CAN SEE OTHER POOL PHOTOS:
+Identify pool water color/clarity issues, algae types, equipment problems, chemical product labels, filter/pump conditions, liner or surface damage. Describe what you see and give specific actionable advice.
 
-GENERAL POOL QUESTIONS:
+GENERAL POOL QUESTIONS (no image):
 Help with water chemistry & balancing, maintenance schedules, troubleshooting, chemical dosing, and seasonal advice. Be specific, practical, and concise.
 
 Today is ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}.`;
@@ -605,8 +609,15 @@ async function sendMessage(text){
   const msg={role:'user',content:msgText};
   let imageData=null;
   if(hasImage){
+    // Verify we actually have base64 data before claiming image is attached
+    if(!S._pendingImage.base64||S._pendingImage.base64.length<100){
+      S.messages.push({role:'assistant',content:'⚠ Image failed to process. Please try attaching it again.'});
+      S._pendingImage=null;renderAttachPreview();render();return;
+    }
     imageData={base64:S._pendingImage.base64,mediaType:S._pendingImage.mediaType,preview:S._pendingImage.preview};
     msg._image=imageData.preview;
+    msg._imageSize=imageData.base64.length; // track for confirmation
+    console.log('[Clarity] Image attached:',Math.round(imageData.base64.length/1024)+'KB base64,',imageData.mediaType);
     S._pendingImage=null;
     renderAttachPreview();
   }
@@ -618,16 +629,27 @@ async function sendMessage(text){
     const raw=[];
     const filtered=S.messages.filter(m=>m.role==='user'||m.role==='assistant');
     const recent=filtered.slice(-MAX_HISTORY_MSGS);
+    let imageIncluded=false;
     recent.forEach(m=>{
       if(m===msg&&imageData){
         raw.push({role:'user',content:[
           {type:'image',source:{type:'base64',media_type:imageData.mediaType,data:imageData.base64}},
           {type:'text',text:msgText}
         ]});
+        imageIncluded=true;
       } else {
         raw.push({role:m.role,content:m.content});
       }
     });
+    // If we had imageData but it wasn't included (edge case), warn
+    if(imageData&&!imageIncluded){
+      console.warn('[Clarity] Image was attached but not included in API call — message may have been outside recent history window');
+      S.messages.push({role:'assistant',content:'⚠ Something went wrong attaching the image. Please try again.'});
+      S.thinking=false;render();return;
+    }
+    if(imageData&&imageIncluded){
+      console.log('[Clarity] Image confirmed in API payload');
+    }
     // Sanitize: must start with 'user' and strictly alternate roles
     const api=[];
     for(const m of raw){
@@ -638,6 +660,15 @@ async function sendMessage(text){
       }
       api.push(m);
     }
+    // Final verification: check that the last user message in api still has the image
+    if(imageData&&imageIncluded){
+      const lastUser=api.filter(m=>m.role==='user').pop();
+      if(!lastUser||!Array.isArray(lastUser.content)){
+        console.error('[Clarity] Image lost during message sanitization!');
+        S.messages.push({role:'assistant',content:'⚠ Image was lost while preparing the request. Please try again.'});
+        S.thinking=false;render();return;
+      }
+    }
     const systemPrompt=SYSTEM.replace('{POOL_SIZE}',S.gallons.toLocaleString());
     const reply=await callClaude({model:MODEL,max_tokens:1500,
       system:systemPrompt+`\nUser's pool: inground, ~${S.gallons.toLocaleString()} gallons.`,messages:api});
@@ -646,24 +677,48 @@ async function sendMessage(text){
   S.thinking=false;render();
 }
 
-function compressImage(file,maxW=900){
-  return new Promise(res=>{
-    const img=new Image(),url=URL.createObjectURL(file);
-    img.onload=()=>{const s=Math.min(1,maxW/img.width),c=document.createElement('canvas');
-      c.width=img.width*s;c.height=img.height*s;c.getContext('2d').drawImage(img,0,0,c.width,c.height);
-      URL.revokeObjectURL(url);
-      c.toBlob(bl=>{const fr=new FileReader();fr.onload=()=>res({base64:fr.result.split(',')[1],mediaType:'image/jpeg'});fr.readAsDataURL(bl);},'image/jpeg',.85);};
-    img.src=url;
+function compressImage(file,maxW=1200){
+  return new Promise((res,rej)=>{
+    try{
+      const img=new Image(),url=URL.createObjectURL(file);
+      img.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('Failed to load image'));};
+      img.onload=()=>{
+        try{
+          const s=Math.min(1,maxW/img.width),c=document.createElement('canvas');
+          c.width=img.width*s;c.height=img.height*s;c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+          URL.revokeObjectURL(url);
+          c.toBlob(bl=>{
+            if(!bl){rej(new Error('Canvas toBlob failed'));return;}
+            const fr=new FileReader();
+            fr.onerror=()=>rej(new Error('FileReader failed'));
+            fr.onload=()=>{
+              const b64=fr.result.split(',')[1];
+              if(!b64||b64.length<50){rej(new Error('Base64 conversion produced empty result'));return;}
+              console.log('[Clarity] Image compressed:',img.width+'x'+img.height,'→',c.width+'x'+c.height,Math.round(b64.length/1024)+'KB');
+              res({base64:b64,mediaType:'image/jpeg'});
+            };
+            fr.readAsDataURL(bl);
+          },'image/jpeg',.88);
+        }catch(e){rej(e);}
+      };
+      img.src=url;
+    }catch(e){rej(e);}
   });
 }
 
 async function attachImage(file){
   if(!file||!file.type.startsWith('image/'))return;
-  const {base64,mediaType}=await compressImage(file);
-  const preview=URL.createObjectURL(file);
-  S._pendingImage={base64,mediaType,preview,file};
-  renderAttachPreview();
-  $('msgIn').focus();
+  try{
+    const {base64,mediaType}=await compressImage(file);
+    const preview=URL.createObjectURL(file);
+    S._pendingImage={base64,mediaType,preview,file};
+    renderAttachPreview();
+    $('msgIn').focus();
+  }catch(e){
+    console.error('[Clarity] Image processing failed:',e);
+    S.messages.push({role:'assistant',content:`⚠ Couldn't process that image: ${e.message}. Try a different photo.`});
+    render();
+  }
 }
 function renderAttachPreview(){
   const el=$('attachPreview');

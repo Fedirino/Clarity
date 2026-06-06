@@ -4,6 +4,25 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [1.5.1] — 2026-06-05
+
+### Fixed — Anti-hallucination & image reliability
+- **Fixed hallucinated strip readings** — Claude was fabricating test strip results when no image was actually attached. Root cause: the system prompt said "you CAN and MUST analyze images" so aggressively that the model invented readings rather than admitting no image was present. Rewrote the vision section with an explicit anti-hallucination guard: "NEVER fabricate readings. If you do not see an image, tell the user."
+- **Added image verification pipeline** — `sendMessage()` now verifies base64 data exists and is non-trivial (>100 bytes) before claiming an image is attached. If the image payload is missing or empty, the user gets an explicit error instead of a hallucinated response.
+- **Added post-sanitization image check** — After the message array is sanitized for API role-alternation rules, the code now verifies the image survived the sanitization. If it was dropped (e.g. by consecutive-role merging), the user gets an error instead of a text-only request.
+- **Added "📷 Image sent" confirmation badge** — Each user message that included an image now shows a green badge with the payload size (e.g. "📷 Image sent (247KB)"). This gives the user visible proof the image made it into the API call.
+- **Added error handling to `compressImage()`** — Canvas/blob/FileReader failures now reject the promise with a clear error instead of hanging silently. `img.onerror` is handled. Empty base64 results are caught.
+- **Added error handling to `attachImage()`** — If image compression fails, the user sees a chat error message instead of nothing happening.
+
+### Changed
+- **Increased image resolution** — `compressImage` max width raised from 900px → 1200px for clearer test strip pad detail.
+- **Increased JPEG quality** — from 0.85 → 0.88 to preserve more color accuracy in strip photos.
+- **Console logging** — Image processing now logs size, dimensions, and API inclusion to the browser console for debugging.
+- Version bumped from 1.5.0 → 1.5.1 in footer and settings.
+- Old version archived as `old-v1.5.0.html`.
+
+---
+
 ## [1.5.0] — 2026-06-05
 
 ### Changed — "Simple First" rewrite
