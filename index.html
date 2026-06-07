@@ -209,7 +209,7 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span style="opacity:.45">v1.6.0</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span style="opacity:.45">v1.6.1</span></div>
   </div>
 </div>
 
@@ -336,7 +336,7 @@ function renderSetup(){
       <div class="chips">${[8000,12000,15000,20000,25000,30000].map(g=>
         `<button class="chip ${S.gallons===g?'on':''}" data-g="${g}">${(g/1000)}k</button>`).join('')}</div>
       <div class="hint">Dosing amounts scale to your pool size. Pick the closest match.</div>
-      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v1.6.0</div>
+      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v1.6.1</div>
     </div>`;
   el.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{S.gallons=+c.dataset.g;persist();renderSetup();renderTabs();render()});
 }
@@ -553,6 +553,7 @@ IMAGES:
 - You have vision. If NO image is attached to the user's latest message, do NOT pretend to see one and do NOT make up readings. Say: "I don't see a photo attached. Tap the camera or upload button to add one, then send."
 - For a strip reading you will receive TWO images: (1) the official Aqua 7 reference color chart, then (2) the user's strip photo. Read the strip ONLY by comparing its pads against that reference chart.
 - If the user's photo is NOT a test strip (algae, water, equipment, a product label, etc.), ignore the reference chart and just analyze the photo normally.
+- Photos stay attached on later turns. If you gave a reading from a photo earlier in this conversation and the user asks a follow-up, re-examine the SAME attached photo and stay consistent. Do NOT claim you never saw an image that is attached, and do NOT recant a real reading just because the question is a follow-up.
 
 ${AQUA7_SCALE}
 
@@ -626,6 +627,7 @@ async function sendMessage(text){
     imageData={base64:S._pendingImage.base64,mediaType:S._pendingImage.mediaType,preview:S._pendingImage.preview};
     msg._image=imageData.preview;
     msg._imageSize=imageData.base64.length; // track for confirmation
+    msg._imgB64=imageData.base64; msg._imgMedia=imageData.mediaType; // persist so follow-up turns can re-examine the same photo
     console.log('[Clarity] Image attached:',Math.round(imageData.base64.length/1024)+'KB base64,',imageData.mediaType);
     S._pendingImage=null;
     renderAttachPreview();
@@ -639,16 +641,26 @@ async function sendMessage(text){
     const filtered=S.messages.filter(m=>m.role==='user'||m.role==='assistant');
     const recent=filtered.slice(-MAX_HISTORY_MSGS);
     let imageIncluded=false;
-    recent.forEach(m=>{
-      if(m===msg&&imageData){
-        raw.push({role:'user',content:[
-          {type:'text',text:'REFERENCE (image 1 of 2) — official AquaChek 7-Way / Aqua 7 color chart. Use it to read the strip in image 2. Ignore it if image 2 is not a test strip.'},
-          {type:'image',source:{type:'base64',media_type:REF_CHART_MEDIA,data:REF_CHART_B64}},
-          {type:'text',text:'MY PHOTO (image 2 of 2) — read this against the chart above:'},
-          {type:'image',source:{type:'base64',media_type:imageData.mediaType,data:imageData.base64}},
-          {type:'text',text:msgText}
-        ]});
-        imageIncluded=true;
+    // Re-attach photos that are still in the recent window so follow-up turns
+    // ("is this accurate?") keep the actual image in view. Cap to the 2 newest
+    // images to stay under the request size limit; chart rides with the latest.
+    const imgIdx=recent.map((m,i)=>m._imgB64?i:-1).filter(i=>i>=0);
+    const keepImgs=new Set(imgIdx.slice(-2));
+    const latestImg=imgIdx.length?imgIdx[imgIdx.length-1]:-1;
+    recent.forEach((m,i)=>{
+      if(m._imgB64&&keepImgs.has(i)){
+        const content=[];
+        if(i===latestImg){
+          content.push({type:'text',text:'REFERENCE — the official AquaChek 7-Way / Aqua 7 color chart. Read the strip photo below against it. Ignore it if the photo is not a test strip.'});
+          content.push({type:'image',source:{type:'base64',media_type:REF_CHART_MEDIA,data:REF_CHART_B64}});
+          content.push({type:'text',text:'MY PHOTO — read this against the chart above:'});
+        }
+        content.push({type:'image',source:{type:'base64',media_type:m._imgMedia,data:m._imgB64}});
+        content.push({type:'text',text:m.content||'Please analyze this image as a pool expert.'});
+        raw.push({role:'user',content});
+        if(m===msg)imageIncluded=true;
+      } else if(m._imgB64){
+        raw.push({role:m.role,content:(m.content||'')+' [an earlier photo was here]'});
       } else {
         raw.push({role:m.role,content:m.content});
       }
