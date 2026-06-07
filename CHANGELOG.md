@@ -4,18 +4,49 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
-## [1.5.2] — 2026-06-06
+## [1.6.0] — 2026-06-06
 
-### Fixed — Serverless function dropping image payloads
-- **Root cause: `req.write(string)` silently truncating multi-MB payloads** — The Netlify serverless function (`claude.js`) forwarded the request body to Anthropic by calling `req.write(JSON.stringify(payload))` with a raw string. For large payloads (a base64-encoded JPEG inside a JSON wrapper easily exceeds 1–2 MB), Node's `https.request.write(string)` can silently truncate the data, causing Anthropic to receive a malformed or image-less request. Fixed by converting the JSON string to a `Buffer` before writing: `req.write(Buffer.from(...))`. Buffer writes are byte-exact at any size.
-- **Body size limit was too aggressive** — The old 4 MB gate used `rawBody.length` (string character count), which doesn't account for Netlify's own base64 re-encoding of the body or multi-byte characters. Replaced with `Buffer.byteLength()` and raised the limit to 10 MB.
-- **Added `Content-Type: application/json; charset=utf-8`** — Explicit charset ensures the API interprets the payload correctly.
-- **Increased request timeout** — Raised from 25 s → 55 s. Vision requests with image payloads take longer for the model to process; 25 s was borderline.
-- **Added server-side payload logging** — The function now logs message count, whether an image is present, approximate image size, and the Anthropic response status to Netlify function logs for debugging.
-- **Added `messages` array validation** — Returns a clear 400 error if the frontend sends a request without a `messages` array, instead of forwarding a malformed payload.
+### Fixed — Root cause of false/inaccurate strip readings
+The app was printing confident, precise strip readings that were effectively
+guesses. Diagnosed five compounding causes and fixed all of them:
 
-### Changed
-- Version bumped from 1.5.1 → 1.5.2 in footer and settings.
+1. **No reference scale was ever given to the model.** The prompt listed *ideal
+   target ranges* but never told Claude what each *color* means on an Aqua 7
+   strip, so color→value mapping was guesswork. **Fix:** the official AquaChek
+   7-Way color chart is now embedded in the app (base64, single-file preserved)
+   and sent as the *first* image on every photo request, plus the exact numeric
+   scale and pad order are baked into the system prompt as text.
+2. **Image pipeline degraded the only signal that matters — color.** JPEG at
+   q0.88 + 1200px downscale blurred and shifted pad hues. **Fix:** quality
+   raised 0.88 → 0.92, max width 1200 → 1500.
+3. **No way to correct for lighting/white balance.** **Fix:** sending the chart
+   in the *same* request lets the model compare relatively; the prompt also
+   tells it to flag warm/color-cast lighting.
+4. **False precision.** Single-point numbers ("1.8 ppm") a strip can't resolve.
+   **Fix:** prompt now requires nearest-swatch values or a bracket between two
+   swatches, never invented precision.
+5. **Pad-to-parameter mapping.** **Fix:** prompt states the physical pad order
+   (Total Hardness = end/tip … Cyanuric Acid = nearest handle) and tells the
+   model to ask if orientation is unclear.
+
+### Changed — Honesty
+- System prompt rewritten around one rule: **never invent a reading.** If a pad
+  is washed out, glared, shadowed, or color-cast, Clarity now says "I can't read
+  that pad confidently" and skips it instead of guessing. If the whole photo is
+  too poor it asks for a re-shoot in even, indirect light.
+- Welcome message reset expectations: Aqua 7 strips, readings are honest
+  estimates/ranges (not lab-precise).
+- `max_tokens` 1500 → 1800 for the fuller per-pad analysis.
+- Locked to **AquaChek 7-Way only** (no multi-brand guessing).
+
+### Added
+- `REF_CHART_B64` / `REF_CHART_MEDIA` — embedded Aqua 7 reference chart.
+- `AQUA7_SCALE` — exact pad order + color→value scale, injected into the prompt.
+- `aquachek7wayteststripcolorchart.jpg` kept in the repo as the source of the
+  embedded chart.
+
+### Housekeeping
+- Version bumped 1.5.1 → 1.6.0 (footer + settings).
 - Old version archived as `old-v1.5.1.html`.
 
 ---

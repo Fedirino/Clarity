@@ -32,11 +32,12 @@ Open it in a browser to run it.
 ### File structure
 
 ```
-index.html                     ← the full app (v1.5.2)
+index.html                     ← the full app (v1.6.0)
 netlify.toml                   ← Netlify config (function path + bundler)
 netlify/functions/claude.js    ← serverless proxy (keeps API key safe)
 old-v1.5.1.html                ← archived previous version
 old-v1.5.0.html                ← archived earlier version
+aquachek7wayteststripcolorchart.jpg  ← source of embedded Aqua 7 chart
 old-v1.4.1.html                ← archived earlier version
 old-v1.4.0.html                ← archived earlier version
 old-v1.3.1.html                ← archived earlier version
@@ -66,19 +67,23 @@ CHANGELOG.md
   overdue / due-today badges; checking one off resets its next-due date.
 - **Pool size** — set in ⚙ settings (gallons); all dosing scales to it.
 
-### How strip analysis works (v1.5.1+)
+### How strip analysis works (v1.6.0+)
 
-1. Tap 📷 or 📁 to attach a photo of your test strip.
+1. Tap 📷 or 📁 to attach a photo of your **AquaChek 7-Way** strip (even,
+   indirect light, no flash).
 2. (Optional) type a question — or just hit send.
-3. Claude sees the image and reads the pad colors against standard test strip
-   scales. It gives you estimated PPM levels for each parameter, flags anything
-   out of range, and tells you exactly what chemicals to add and how much (scaled
-   to your pool size).
+3. The app sends Claude **two** images: the embedded official Aqua 7 color
+   chart, then your strip. Claude reads each pad **against the chart**, reports
+   a nearest-swatch value or a bracket between two swatches (never fake
+   precision), flags LOW/OK/HIGH, and gives exact dosing for your pool size.
+4. If a pad is unclear (glare, shadow, color cast) Clarity says so and skips it
+   rather than guessing — and asks for a re-shoot if the whole photo is poor.
 
-There is no separate "scan" mode, no JSON extraction, and no calibration step.
-Claude's vision handles any strip brand directly. This replaced the old
-`scanStrip()` pipeline which tried to extract structured JSON from a cheaper
-model and often produced unreliable results.
+The app is locked to AquaChek 7-Way: the exact pad order (Total Hardness at the
+tip … Cyanuric Acid nearest the handle) and color→value scale are baked into the
+prompt, and the chart image rides along with every request. This is what fixed
+the old "confident but wrong" readings — Claude was previously asked to convert
+colors to numbers with no reference scale.
 
 ## Design / brand
 
