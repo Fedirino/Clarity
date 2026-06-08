@@ -177,28 +177,6 @@ textarea:focus,input:focus,select:focus{outline:none}
 .gauge{position:relative;height:6px;background:rgba(255,255,255,.08);border-radius:3px;margin-top:9px}
 .gauge .ideal{position:absolute;height:100%;background:rgba(92,200,160,.22);border-radius:3px}
 .gauge .pin{position:absolute;top:-4px;width:14px;height:14px;border-radius:50%;border:2px solid var(--bg);transform:translateX(-7px)}
-
-/* chat results card */
-.rcard{background:var(--panel2);border:1px solid var(--line2);border-radius:16px;padding:16px;margin-top:10px;animation:fadeIn .3s}
-.rcard-hdr{display:flex;align-items:center;gap:8px;margin-bottom:13px}
-.rcard-hdr .rcard-icon{font-size:18px}
-.rcard-hdr .rcard-title{font-size:11px;color:var(--aqua);letter-spacing:1.5px;text-transform:uppercase;font-family:'DM Mono',monospace}
-.rcard-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
-.rcard-param{background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:11px;padding:10px 8px;text-align:center}
-.rcard-param .rp-label{font-size:9px;color:var(--mut2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;font-family:'DM Mono',monospace}
-.rcard-param .rp-value{font-size:20px;font-weight:600;font-family:'Playfair Display',serif;margin-bottom:3px}
-.rcard-param .rp-badge{display:inline-block;font-size:8px;padding:2px 7px;border-radius:4px;letter-spacing:1px;font-family:'DM Mono',monospace;font-weight:600}
-.rcard-dose{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px;margin-bottom:8px}
-.rcard-dose .rd-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
-.rcard-dose .rd-name{font-size:12.5px;font-weight:600}
-.rcard-dose .rd-badge{font-size:8px;padding:2px 7px;border-radius:4px;letter-spacing:1px;font-family:'DM Mono',monospace}
-.rcard-dose .rd-amt{font-size:17px;font-family:'Playfair Display',serif;color:var(--aqua2);margin:4px 0}
-.rcard-dose .rd-ex{font-size:11px;color:var(--mut);line-height:1.5}
-.rcard-save{width:100%;margin-top:10px;background:linear-gradient(135deg,var(--teal1),var(--teal2));color:#fff;border:none;border-radius:11px;padding:11px;font-weight:600;font-size:13px;cursor:pointer;font-family:inherit;transition:.2s;box-shadow:0 6px 18px -8px var(--teal2)}
-.rcard-save:hover{filter:brightness(1.1)}
-.rcard-save:disabled{opacity:.4;cursor:default;filter:none}
-.rcard-ok{text-align:center;padding:10px 0 4px;color:var(--green);font-size:13px}
-.ver-tag{font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;letter-spacing:1px;opacity:.6}
 </style>
 </head>
 <body>
@@ -231,7 +209,7 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v1.7.0</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span style="opacity:.45">v1.6.1</span></div>
   </div>
 </div>
 
@@ -358,7 +336,7 @@ function renderSetup(){
       <div class="chips">${[8000,12000,15000,20000,25000,30000].map(g=>
         `<button class="chip ${S.gallons===g?'on':''}" data-g="${g}">${(g/1000)}k</button>`).join('')}</div>
       <div class="hint">Dosing amounts scale to your pool size. Pick the closest match.</div>
-      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v1.7.0</div>
+      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v1.6.1</div>
     </div>`;
   el.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{S.gallons=+c.dataset.g;persist();renderSetup();renderTabs();render()});
 }
@@ -381,67 +359,14 @@ function gaugeHTML(v,k){
     ${p!=null?`<div class="pin" style="left:${p}%;background:${c};box-shadow:0 0 8px ${c}"></div>`:''}</div>`;
 }
 
-function parseReadings(text){
-  const m=text.match(/<!--READINGS:(.*?)-->/s);
-  if(!m)return null;
-  try{
-    const data=JSON.parse(m[1]);
-    const clean=text.replace(/\n?<!--READINGS:.*?-->/s,'').trim();
-    return{clean,readings:data};
-  }catch(e){return null;}
-}
-
-function renderResultsCard(readings,msgIdx){
-  const doses=doseAdvice(readings,S.gallons);
-  const saved=S._savedMsgs&&S._savedMsgs.has(msgIdx);
-  let h=`<div class="rcard"><div class="rcard-hdr"><span class="rcard-icon">📊</span><span class="rcard-title">Test Strip Results</span></div>`;
-  h+=`<div class="rcard-grid">`;
-  KEYS.forEach(k=>{
-    const v=readings[k];
-    const c=color(v,k);
-    const st=statusOf(v,k);
-    const stColor=st==='OK'?'var(--green)':st==='HIGH'?'var(--coral)':st==='LOW'?'var(--aqua)':'var(--mut2)';
-    h+=`<div class="rcard-param"><div class="rp-label">${IDEAL[k].short}</div>`;
-    h+=`<div class="rp-value" style="color:${v!=null?c:'rgba(255,255,255,.15)'}">${v!=null?v:'—'}</div>`;
-    if(st)h+=`<span class="rp-badge" style="color:${stColor};background:${stColor}1a">${st}</span>`;
-    h+=`${gaugeHTML(v,k)}</div>`;
-  });
-  h+=`</div>`;
-  if(doses.length===0){
-    h+=`<div class="rcard-ok">✨ Everything is in range — water is balanced!</div>`;
-  } else {
-    h+=`<div style="font-size:9px;color:var(--mut2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;font-family:'DM Mono',monospace">Recommended · ${S.gallons.toLocaleString()} gal</div>`;
-    doses.forEach(d=>{
-      const c=d.sev==='high'?'var(--coral)':'var(--aqua)';
-      h+=`<div class="rcard-dose"><div class="rd-top"><span class="rd-name">${d.nm}</span>`;
-      h+=`<span class="rd-badge" style="color:${c};background:${c}1a">${d.sev==='high'?'REDUCE':'ADD'}</span></div>`;
-      h+=`<div class="rd-amt">${d.amt}</div><div class="rd-ex">${d.ex}</div></div>`;
-    });
-  }
-  h+=`<button class="rcard-save" data-msgidx="${msgIdx}" ${saved?'disabled':''}>${saved?'✓ Saved to History':'💾 Save to History'}</button>`;
-  h+=`</div>`;
-  return h;
-}
-
 function renderChat(b){
   const quick=["How often should I test my water?","My water looks cloudy — what do I check?","How do I shock my pool?","Send me a photo of your test strip and I'll read it"];
   let html='<div class="bin">';
-  if(!S._savedMsgs)S._savedMsgs=new Set();
-  S.messages.forEach((m,idx)=>{
+  S.messages.forEach(m=>{
     const u=m.role==='user';
     const imgHtml=m._image?`<img class="msg-img" src="${m._image}">`:'';
     const sentBadge=m._imageSize?`<div style="font-size:9px;color:var(--green);margin-top:4px;font-family:'DM Mono',monospace">📷 Image sent (${Math.round(m._imageSize/1024)}KB)</div>`:'';
-    let displayText=m.content;
-    let cardHtml='';
-    if(!u){
-      const parsed=parseReadings(m.content);
-      if(parsed){
-        displayText=parsed.clean;
-        m._readings=parsed.readings;
-        cardHtml=renderResultsCard(parsed.readings,idx);
-      }
-    }
-    html+=`<div class="msg ${u?'u':''}">${u?'':`<div class="av">${AV}</div>`}<div class="bub ${u?'u':'a'}">${imgHtml}${esc(displayText)}${sentBadge}${cardHtml}</div></div>`;
+    html+=`<div class="msg ${u?'u':''}">${u?'':`<div class="av">${AV}</div>`}<div class="bub ${u?'u':'a'}">${imgHtml}${esc(m.content)}${sentBadge}</div></div>`;
   });
   if(S.thinking)html+=`<div class="msg"><div class="av">${AV}</div><div class="dots"><i style="animation-delay:0s"></i><i style="animation-delay:.2s"></i><i style="animation-delay:.4s"></i></div></div>`;
   if(S.messages.length===1&&!S.thinking){
@@ -450,19 +375,6 @@ function renderChat(b){
   html+='<div id="bottom"></div></div>';
   b.innerHTML=html;
   b.querySelectorAll('.sg').forEach(s=>s.onclick=()=>sendMessage(s.dataset.q));
-  b.querySelectorAll('.rcard-save').forEach(btn=>{
-    if(btn.disabled)return;
-    btn.onclick=(e)=>{
-      e.stopPropagation();
-      const mi=+btn.dataset.msgidx;
-      const msg=S.messages[mi];
-      if(msg&&msg._readings){
-        logReading(msg._readings);
-        S._savedMsgs.add(mi);
-        render();
-      }
-    };
-  });
   $('bottom')?.scrollIntoView({behavior:'smooth'});
 }
 
@@ -507,7 +419,7 @@ function renderChem(b){
 function renderHistory(b){
   if(!S.history.length){b.innerHTML=`<div class="bin"><div class="empty"><div class="e">📋</div>
     <div class="mono" style="letter-spacing:1px;text-transform:uppercase;font-size:12px">No tests yet</div>
-    <div style="font-size:12px;margin-top:6px">Send a strip photo in Chat or enter readings in Chemistry to start tracking.</div></div></div>`;return;}
+    <div style="font-size:12px;margin-top:6px">Log readings in the Chemistry tab</div></div></div>`;return;}
   let html=`<div class="bin"><div class="mono" style="font-size:10px;color:var(--mut2);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">${S.history.length} test${S.history.length>1?'s':''} recorded</div>`;
   S.history.forEach(e=>{
     const d=new Date(e.timestamp);
@@ -664,10 +576,6 @@ OTHER POOL PHOTOS (not a strip): identify water clarity/color issues, algae type
 
 GENERAL QUESTIONS (no photo): help with chemistry, balancing, maintenance schedules, troubleshooting, dosing, and seasonal advice — specific, practical, concise.
 
-STRUCTURED OUTPUT: When you read a test strip and can report at least some numerical readings, append a hidden data block at the VERY END of your response on its own line:
-<!--READINGS:{"chlorine":X,"totalChlorine":X,"ph":X,"alkalinity":X,"hardness":X,"cyanuric":X}-->
-Use null for any pad you could not read. Use the single best-estimate number (e.g. if "between 1 and 3, closer to 3" use 3). Do NOT include this block for general questions, non-strip photos, or if you could not read ANY pads.
-
 Today is ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}.`;
 
 const MAX_HISTORY_MSGS=10;
@@ -786,7 +694,7 @@ async function sendMessage(text){
       }
     }
     const systemPrompt=SYSTEM.replace('{POOL_SIZE}',S.gallons.toLocaleString());
-    const reply=await callClaude({model:MODEL,max_tokens:2000,
+    const reply=await callClaude({model:MODEL,max_tokens:1800,
       system:systemPrompt+`\nUser's pool: inground, ~${S.gallons.toLocaleString()} gallons.`,messages:api});
     S.messages.push({role:'assistant',content:reply});
   }catch(e){S.messages.push({role:'assistant',content:`⚠ ${e.message}`});}
