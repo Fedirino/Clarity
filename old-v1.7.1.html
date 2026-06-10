@@ -231,7 +231,7 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v1.8.0</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v1.7.1</span></div>
   </div>
 </div>
 
@@ -315,7 +315,6 @@ let S={
   gallons: store.get('gallons')||15000,
   history: store.get('history')||[],
   tasks: store.get('tasks')||defaultTasks(),
-  poolNotes: store.get('poolNotes')||'',
   messages:[{role:'assistant',content:"Hi! I'm Clarity, your pool assistant.\n\nFor test strips I'm set up for AquaChek 7-Way (Aqua 7). I compare your photo against the official Aqua 7 color chart and give honest estimates — usually a range, since strips aren't lab-precise — then tell you what to add for your pool size.\n\n📷 Snap or 📁 upload a strip in even, indirect light (no flash), then send. I can also look at algae, cloudy water, or equipment. If a pad is unclear I'll say so rather than guess."}],
   tab:'chat', thinking:false, setupOpen:false, editTask:null,
   _pendingImage:null,
@@ -332,7 +331,7 @@ function defaultTasks(){
     {id:7,t:'Inspect equipment & water level',freq:'Weekly',int:7,last:now-6*day,done:false},
   ];
 }
-function persist(){store.set('gallons',S.gallons);store.set('history',S.history);store.set('tasks',S.tasks);store.set('poolNotes',S.poolNotes);}
+function persist(){store.set('gallons',S.gallons);store.set('history',S.history);store.set('tasks',S.tasks);}
 
 const $=id=>document.getElementById(id);
 const TABS=[['chat','Chat'],['chem','Chemistry'],['history','History'],['schedule','Schedule']];
@@ -359,14 +358,9 @@ function renderSetup(){
       <div class="chips">${[8000,12000,15000,20000,25000,30000].map(g=>
         `<button class="chip ${S.gallons===g?'on':''}" data-g="${g}">${(g/1000)}k</button>`).join('')}</div>
       <div class="hint">Dosing amounts scale to your pool size. Pick the closest match.</div>
-      <div style="margin-top:16px"><div class="lab">Pool notes & conditions</div>
-      <textarea id="poolNotesInput" style="width:100%;min-height:70px;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:11px;padding:10px 12px;color:var(--txt);font-size:13px;font-family:inherit;resize:vertical;line-height:1.5" placeholder="Describe your pool's situation — e.g. 'has a leak, hard to keep balanced', 'salt water system', 'in full sun, no cover', 'recently replastered'…">${esc(S.poolNotes)}</textarea>
-      <div class="hint">These notes are sent to Clarity with every message so it understands your pool's ongoing situation and can give better advice.</div></div>
-      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v1.8.0</div>
+      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v1.7.1</div>
     </div>`;
   el.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{S.gallons=+c.dataset.g;persist();renderSetup();renderTabs();render()});
-  const notesEl=$('poolNotesInput');
-  if(notesEl)notesEl.onblur=()=>{S.poolNotes=notesEl.value.trim();persist();};
 }
 
 function render(){
@@ -485,8 +479,7 @@ function renderChem(b){
     html+=`<div class="inrow"><label>${i.label} <span class="rng">${i.min}–${i.max}${i.unit}</span></label>
       <input data-k="${k}" type="number" inputmode="decimal" step="any" value="${r[k]??''}" placeholder="–"></div>`;
   });
-  html+=`<button class="btn go" id="calcBtn">Calculate dosing</button>
-    <button class="btn" id="directLogBtn" style="background:var(--panel2);border:1px solid var(--line);margin-top:8px;width:100%;font-size:13px;color:var(--aqua)">💾 Save readings to history</button></div>`;
+  html+=`<button class="btn go" id="calcBtn">Calculate dosing</button></div>`;
   if(S._doses){
     if(S._doses.length===0){
       html+=`<div class="formcard" style="text-align:center"><div style="font-size:28px;margin-bottom:8px">✨</div>
@@ -508,7 +501,6 @@ function renderChem(b){
   b.querySelectorAll('input[data-k]').forEach(inp=>inp.oninput=e=>{S._draft=S._draft||{};const val=e.target.value;S._draft[e.target.dataset.k]=val===''?null:parseFloat(val)});
   if(last&&$('pullBtn'))$('pullBtn').onclick=()=>{S._draft={};KEYS.forEach(k=>S._draft[k]=last[k]??null);S._doses=doseAdvice(S._draft,S.gallons);render()};
   $('calcBtn').onclick=()=>{const d=S._draft||{};S._doses=doseAdvice(d,S.gallons);render()};
-  $('directLogBtn').onclick=()=>{const d=S._draft||{};const hasAny=KEYS.some(k=>d[k]!=null);if(!hasAny){alert('Enter at least one reading first.');return;}logReading(d);S.tab='history';render();};
   if($('logBtn'))$('logBtn').onclick=()=>{logReading(S._draft);S.tab='history';render()};
 }
 
@@ -817,9 +809,8 @@ async function sendMessage(text){
     }
     const systemPrompt=SYSTEM.replace('{POOL_SIZE}',S.gallons.toLocaleString());
     const historyCtx=buildHistoryContext();
-    const notesCtx=S.poolNotes?`\n\nPOOL NOTES (owner's description of their pool situation — factor this into every answer):\n${S.poolNotes}`:'';
     const reply=await callClaude({model:MODEL,max_tokens:2000,
-      system:systemPrompt+`\nUser's pool: inground, ~${S.gallons.toLocaleString()} gallons.`+notesCtx+historyCtx,messages:api});
+      system:systemPrompt+`\nUser's pool: inground, ~${S.gallons.toLocaleString()} gallons.`+historyCtx,messages:api});
     S.messages.push({role:'assistant',content:reply});
   }catch(e){S.messages.push({role:'assistant',content:`⚠ ${e.message}`});}
   S.thinking=false;render();
