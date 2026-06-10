@@ -32,10 +32,11 @@ Open it in a browser to run it.
 ### File structure
 
 ```
-index.html                     ← the full app (v1.7.0)
+index.html                     ← the full app (v1.7.1)
 netlify.toml                   ← Netlify config (function path + bundler)
 netlify/functions/claude.js    ← serverless proxy (keeps API key safe)
-old-v1.6.1.html                ← archived previous version
+old-v1.7.0.html                ← archived previous version
+old-v1.6.1.html                ← archived earlier version
 old-v1.5.0.html                ← archived earlier version
 old-v1.4.1.html                ← archived earlier version
 old-v1.4.0.html                ← archived earlier version

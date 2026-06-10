@@ -4,6 +4,20 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [1.7.1] — 2026-06-10
+
+### Added — Pool Memory & Simplified Readings
+- **Pool history context in every API call** — New `buildHistoryContext()` function serializes the last 8 saved test results into a compact text block injected into the system prompt. Claude now sees your past readings and can spot trends, compare to previous tests, and give contextual advice (e.g. "your pH has been running high the last 3 tests — might be an alkalinity issue").
+- History context format: `• Jun 8 — FC:3 · TC:3 · pH:7.4 · Alk:100 · Hard:250 · CYA:40 — all OK` with out-of-range flags like `pH:7.8(HIGH)`.
+
+### Changed
+- **Simplified strip reading text** — Since v1.7.0's results card handles the visual presentation (gauges, badges, dosing cards), the system prompt now tells Claude to keep strip reading text SHORT: a quick summary sentence, specific fixes for anything off, done. No more listing every parameter line-by-line in text.
+- **System prompt restructured** — The verbose "FOR EACH READABLE PARAMETER" block replaced with concise instructions that lean on the visual card. Claude now writes conversationally, not clinically.
+- Version bumped from 1.7.0 → 1.7.1 in footer and settings.
+- Old version archived as `old-v1.7.0.html`.
+
+---
+
 ## [1.7.0] — 2026-06-08
 
 ### Added — Chat-to-History pipeline & results UI
