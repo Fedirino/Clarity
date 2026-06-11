@@ -4,7 +4,56 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
-## [1.7.1] — 2026-06-10
+## [2.0.0] — 2026-06-10
+
+### Major Release: Personal AI Co-Pilot & Opus Integration
+
+**Overview**: Clarity graduates from a "test strip reader tool" to a "personal pool maintenance co-pilot." This release upgrades to Claude Opus for conversational reasoning and personalization, while keeping Haiku for fast image analysis. The system now learns your pool's patterns over time and gives increasingly personalized, anticipatory advice.
+
+### Added
+- **Dual-model architecture**: `CHAT_MODEL` (claude-opus-4-20250514) for reasoning, pattern recognition, and learning; `STRIP_MODEL` (claude-haiku-4-5-20251001) for fast image analysis. The app auto-detects whether a message contains an image and routes to the appropriate model.
+- **Coaching/co-pilot system prompt**: Complete redesign of the system prompt. Claude now treats conversations as a collaborative partnership: "You are learning this person's pool alongside them. You remember patterns, anticipate problems, and improve your advice as you learn more over weeks and months."
+- **Learning & personalization section in system prompt**: New instructions for Claude to:
+  - Compare each new reading to their historical baseline
+  - Point out interesting patterns ("Your FC typically drops 0.5 ppm/day in summer heat")
+  - Notice anomalies ("This is unusual — did something change?")
+  - Ask clarifying questions based on their history
+  - Update mental model after each session
+  - Anticipate issues and suggest proactive maintenance
+- **Foundation for persistent knowledge base**: App now structured to support loading pool profiles and enriched history into every chat (currently in localStorage; future releases will add GitHub persistence).
+
+### Changed
+- **Model selection logic in `sendMessage()`**: Added `hasImage` detection. If the API message array contains any image content blocks, routes to Haiku (speed + accuracy for colors). If text-only, routes to Opus (reasoning + learning).
+- **System prompt completely rewritten**:
+  - Opens with "You are Clarity, a personal pool maintenance co-pilot" instead of "friendly assistant"
+  - New "YOUR ROLE" section emphasizing partnership and learning
+  - New "LEARNING & PERSONALIZATION" section with 5 key behaviors
+  - Tone shifted from prescriptive to collaborative
+  - Kept all existing technical instructions for strip reading, image handling, honesty rules
+- **Version bumped** from 1.8.0 → 2.0.0 in footer (`<span class="ver-tag">v2.0.0</span>`) and settings panel.
+- **Old version archived** as `old-v1_8_0.html`.
+
+### Technical Details
+- **No breaking changes**: All existing features work as before (strip scanning, manual entry, history, Chemistry tab, image re-attachment across turns).
+- **Chat history transfers seamlessly**: No migration needed.
+- **Model allowlist updated in Netlify function** (`netlify/functions/claude.js`): Added `claude-opus-4-20250514` to `ALLOWED_MODELS`.
+- **System prompt injection remains unchanged**: History context still injects via `buildHistoryContext()`; pool notes still injected via `S.poolNotes`.
+
+### Why This Matters
+- **Opus reasoning power** enables pattern recognition that Sonnet could not reliably do (e.g., "Your pH rises 0.3/week in summer, but stays stable in winter — here's why").
+- **Co-pilot framing** shifts the mental model from "tool" to "partner," encouraging richer conversation and longer-term learning.
+- **Fast image analysis** (Haiku for strips) keeps costs down while Opus handles the reasoning-heavy work.
+- **Foundation for growth**: This architecture makes it simple to add persistent knowledge bases, GitHub backing, and seasonal guidance in future releases.
+
+### What to Test
+- Chat with general questions (should feel more personalized, remember pool context)
+- Upload a strip photo (should be read with Haiku quickly)
+- Follow-up questions after a strip read (Opus should reason about your specific pool)
+- History panel (should load into Opus's context for smarter advice)
+
+---
+
+## [1.8.0]
 
 ### Added — Pool Memory & Simplified Readings
 - **Pool history context in every API call** — New `buildHistoryContext()` function serializes the last 8 saved test results into a compact text block injected into the system prompt. Claude now sees your past readings and can spot trends, compare to previous tests, and give contextual advice (e.g. "your pH has been running high the last 3 tests — might be an alkalinity issue").

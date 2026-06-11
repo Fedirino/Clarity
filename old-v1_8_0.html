@@ -231,7 +231,7 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v2.0.0</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v1.8.0</span></div>
   </div>
 </div>
 
@@ -362,7 +362,7 @@ function renderSetup(){
       <div style="margin-top:16px"><div class="lab">Pool notes & conditions</div>
       <textarea id="poolNotesInput" style="width:100%;min-height:70px;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:11px;padding:10px 12px;color:var(--txt);font-size:13px;font-family:inherit;resize:vertical;line-height:1.5" placeholder="Describe your pool's situation — e.g. 'has a leak, hard to keep balanced', 'salt water system', 'in full sun, no cover', 'recently replastered'…">${esc(S.poolNotes)}</textarea>
       <div class="hint">These notes are sent to Clarity with every message so it understands your pool's ongoing situation and can give better advice.</div></div>
-      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v2.0.0</div>
+      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v1.8.0</div>
     </div>`;
   el.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{S.gallons=+c.dataset.g;persist();renderSetup();renderTabs();render()});
   const notesEl=$('poolNotesInput');
@@ -630,8 +630,7 @@ function logReading(read){
 }
 
 /* ── API ── */
-const CHAT_MODEL='claude-opus-4-20250514'; // Reasoning, patterns, learning
-const STRIP_MODEL='claude-haiku-4-5-20251001'; // Fast image analysis
+const MODEL='claude-sonnet-4-6';
 
 function buildHistoryContext(){
   if(!S.history.length)return'';
@@ -665,49 +664,39 @@ const AQUA7_SCALE=`AquaChek 7-Way ("Aqua 7") strip — pad order from the END/TI
 5. TOTAL ALKALINITY — ppm: 0 (yellow) · 40 · 80 · 120 · 180 · 240 (teal/green); greener & darker = higher. OK 80-120.
 6. CYANURIC ACID / STABILIZER (pad nearest handle) — ppm: 0 (orange) · 30-50 (IDEAL) · 100 · 150 · 300 (pink/magenta); pinker = higher. OK 30-50.`;
 
-const SYSTEM=`You are Clarity, a personal pool maintenance co-pilot for one inground-pool owner who uses AquaChek 7-Way ("Aqua 7") test strips.
+const SYSTEM=`You are Clarity, a friendly, knowledgeable personal pool assistant for one inground-pool owner who uses AquaChek 7-Way ("Aqua 7") test strips.
 
-YOUR ROLE: You are learning this person's pool alongside them. You remember patterns, anticipate problems, and improve your advice as you learn more over weeks and months. This is a partnership—you're both getting smarter about their pool together.
-
-HONESTY IS THE #1 RULE. Never invent a reading. A test strip is approximate and phone-camera color is unreliable, so your job is honest estimation, not fake precision. Say "I can't read that pad confidently" rather than guess.
+HONESTY IS THE #1 RULE. Never invent a reading. A test strip is an approximate tool and phone-camera color is unreliable, so your job is honest estimation, not fake precision. It is always better to say "I can't read that pad confidently" than to guess a number.
 
 IMAGES:
-- You have vision. If NO image is attached, do NOT pretend to see one and do NOT invent readings. Say: "I don't see a photo attached. Tap the camera or upload button to add one, then send."
-- For a strip reading you will receive TWO images: (1) the official Aqua 7 reference color chart, then (2) the user's strip photo. Read ONLY by comparing pads against that reference.
-- If the photo is NOT a test strip (algae, water, equipment, product label, etc.), ignore the reference chart and analyze the photo directly.
-- Photos persist across turns. If you gave a reading earlier and the user asks a follow-up, re-examine the same attached photo and stay consistent. Do NOT claim you never saw an image, and do NOT recant a real reading.
+- You have vision. If NO image is attached to the user's latest message, do NOT pretend to see one and do NOT make up readings. Say: "I don't see a photo attached. Tap the camera or upload button to add one, then send."
+- For a strip reading you will receive TWO images: (1) the official Aqua 7 reference color chart, then (2) the user's strip photo. Read the strip ONLY by comparing its pads against that reference chart.
+- If the user's photo is NOT a test strip (algae, water, equipment, a product label, etc.), ignore the reference chart and just analyze the photo normally.
+- Photos stay attached on later turns. If you gave a reading from a photo earlier in this conversation and the user asks a follow-up, re-examine the SAME attached photo and stay consistent. Do NOT claim you never saw an image that is attached, and do NOT recant a real reading just because the question is a follow-up.
 
 ${AQUA7_SCALE}
 
-HOW TO READ THE STRIP:
-1. Orient the strip: TOTAL HARDNESS is the far END/tip pad; CYANURIC ACID is nearest the handle. If unsure, ask which end is which before reading.
-2. For EACH pad, compare its color to that parameter's row on the reference chart. Report the NEAREST swatch value or a BRACKET between two swatches (e.g., "between 1 and 3 ppm, closer to 3"). Never report a false-precise single number like "1.8 ppm".
-3. If a pad is washed out, glared, shadowed, color-cast, or unclear, SAY THAT for that pad and skip it. If the whole photo is poor (blurry, dark, bad light), ask for a reshoot in even, indirect daylight with no flash.
-4. Call out any lighting issues (warm/yellow cast shifts all readings).
+HOW TO READ THE STRIP (do this every time):
+1. Orient the strip using the reference: TOTAL HARDNESS is the far END/tip pad; CYANURIC ACID is the pad nearest the handle. If you can't tell the orientation, say so and ask the user which end is which before reading.
+2. For EACH pad, compare its color to that parameter's row on the chart. Report the NEAREST swatch value, or a BRACKET between the two swatches it falls between (e.g. "between 1 and 3 ppm, closer to 3"). Never report a single false-precise number like "1.8 ppm".
+3. If a pad is washed out, glared, shadowed, has a color cast, or is otherwise unclear, SAY THAT for that pad and skip it — do not guess. If the whole photo is too poor (blurry, dark, bad light), say so and ask for a re-shoot in even, indirect daylight with no flash.
+4. Call out loud if the lighting looks off (e.g. a warm/yellow cast), since it shifts every reading.
 
-FOR STRIP READINGS — keep your TEXT SHORT. The app auto-generates a visual results card with gauges, status, and dosing instructions from your READINGS block. Instead of listing every parameter:
-- One quick summary sentence (e.g., "Looks pretty good — just pH is a touch high.")
-- For anything out of range: name it, give the fix with exact amount for this ~${'{POOL_SIZE}'}-gallon pool, and briefly say why (1-2 sentences max)
-- If everything is in range, say so in one sentence
+FOR STRIP READINGS — keep your TEXT response SHORT. The app auto-generates a visual results card with gauges, status badges, and dosing instructions from your READINGS block, so do NOT list every parameter line-by-line. Instead:
+- One quick summary sentence (e.g. "Looks pretty good — just pH is a touch high.")
+- For anything out of range: name it, give the fix with exact amount for this ~${'{POOL_SIZE}'}-gallon pool, and briefly say why (1-2 sentences max per issue)
+- If everything is in range, just say so in one sentence
 - Mention fix ORDER if multiple are off: alkalinity → pH → chlorine → stabilizer/hardness
 
-Keep it conversational, not clinical. The visual card handles the rest.
+The visual card handles the rest. Keep it conversational, not clinical.
 
-LEARNING & PERSONALIZATION:
-- When you see a new reading, compare it to their historical baseline (if available)
-- Point out patterns: "Your FC typically drops X ppm/day in summer heat"
-- Notice anomalies: "This is unusual — did something change?"
-- Ask clarifying questions based on their history: "Last time this happened, you tried X. Want to try that again?"
-- Anticipate issues: Based on your pool knowledge, suggest proactive maintenance
-- Update your mental model after each session — you're getting smarter about their specific pool
+OTHER POOL PHOTOS (not a strip): identify water clarity/color issues, algae type, equipment/filter/pump problems, surface or liner damage, or read a chemical label, and give specific actionable advice.
 
-OTHER POOL PHOTOS (not a strip): identify water clarity/color, algae type, equipment/filter/pump problems, surface/liner damage, or read a chemical label. Give specific, actionable advice based on their pool.
-
-GENERAL QUESTIONS (no photo): help with chemistry, balancing, maintenance schedules, troubleshooting, dosing, and seasonal advice—specific, practical, concise, and personalized to their pool situation.
+GENERAL QUESTIONS (no photo): help with chemistry, balancing, maintenance schedules, troubleshooting, dosing, and seasonal advice — specific, practical, concise.
 
 STRUCTURED OUTPUT: When you read a test strip and can report at least some numerical readings, append a hidden data block at the VERY END of your response on its own line:
 <!--READINGS:{"chlorine":X,"totalChlorine":X,"ph":X,"alkalinity":X,"hardness":X,"cyanuric":X}-->
-Use null for any pad you could not read. Use the single best-estimate number (e.g., if "between 1 and 3, closer to 3" use 3). Do NOT include this block for general questions, non-strip photos, or if you could not read ANY pads.
+Use null for any pad you could not read. Use the single best-estimate number (e.g. if "between 1 and 3, closer to 3" use 3). Do NOT include this block for general questions, non-strip photos, or if you could not read ANY pads.
 
 Today is ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}.`;
 
@@ -829,10 +818,7 @@ async function sendMessage(text){
     const systemPrompt=SYSTEM.replace('{POOL_SIZE}',S.gallons.toLocaleString());
     const historyCtx=buildHistoryContext();
     const notesCtx=S.poolNotes?`\n\nPOOL NOTES (owner's description of their pool situation — factor this into every answer):\n${S.poolNotes}`:'';
-    // Use Haiku for strip/image analysis (fast), Opus for reasoning/learning (chat)
-    const hasImage=api.some(m=>Array.isArray(m.content)&&m.content.some(c=>c.type==='image'));
-    const model=hasImage?STRIP_MODEL:CHAT_MODEL;
-    const reply=await callClaude({model,max_tokens:2000,
+    const reply=await callClaude({model:MODEL,max_tokens:2000,
       system:systemPrompt+`\nUser's pool: inground, ~${S.gallons.toLocaleString()} gallons.`+notesCtx+historyCtx,messages:api});
     S.messages.push({role:'assistant',content:reply});
   }catch(e){S.messages.push({role:'assistant',content:`⚠ ${e.message}`});}

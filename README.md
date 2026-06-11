@@ -1,8 +1,10 @@
-# Clarity — Personal Pool Assistant
+# Clarity — Personal Pool Maintenance Co-Pilot
 
-A single-file web app that helps an inground swimming-pool owner manage water
-chemistry, dosing, test history, and maintenance — with an AI assistant powered
-by Claude's vision. First portfolio project.
+A single-file web app that helps an inground swimming-pool owner maintain water
+chemistry with the help of a personal AI co-pilot. Claude learns your pool's patterns
+over time and gives increasingly personalized, anticipatory advice.
+
+**Now powered by Claude Opus** for reasoning, pattern recognition, and learning—while keeping Haiku for fast image analysis.
 
 Everything lives in one file: **`index.html`**. No build step, no dependencies.
 Open it in a browser to run it.
@@ -32,42 +34,34 @@ Open it in a browser to run it.
 ### File structure
 
 ```
-index.html                     ← the full app (v1.7.1)
+index.html                     ← the full app (v2.0.0)
 netlify.toml                   ← Netlify config (function path + bundler)
 netlify/functions/claude.js    ← serverless proxy (keeps API key safe)
-old-v1.7.0.html                ← archived previous version
-old-v1.6.1.html                ← archived earlier version
-old-v1.5.0.html                ← archived earlier version
-old-v1.4.1.html                ← archived earlier version
-old-v1.4.0.html                ← archived earlier version
-old-v1.3.1.html                ← archived earlier version
+aquachek7wayteststripcolorchart.jpg  ← official color reference (embedded as base64)
+old-v1_8_0.html                ← archived previous version
+old-v1_7_1.html                ← archived earlier version
+old-v1_7_0.html                ← archived earlier version
 README.md
 CHANGELOG.md
 ```
 
 ---
 
-## What it does (current features)
+## What it does (v2.0.0 features)
 
-- **Chat tab** — AI pool assistant (Anthropic API, model `claude-sonnet-4-6`)
-  with **full vision**. Attach a photo via 📷 or 📁 and send it — Claude
-  analyzes test strips, pool water, equipment, algae, or anything else and
-  responds with specific actionable advice. No fake scan pipeline, no JSON
-  parsing — the image goes directly to Claude and you get a natural-language
-  expert analysis. Suggested-question chips on first load.
-- **Chemistry tab** — enter 6 readings (Free Chlorine, Total Chlorine, pH,
-  Total Alkalinity, Calcium Hardness, Cyanuric Acid) and get exact chemical
-  dosing scaled to pool size. Includes a chloramine check (flags a shock when
-  total − free chlorine > 0.5 ppm). An "↧ Last test" button pulls the most
-  recent saved readings into the form.
-- **History tab** — every test saved locally with a 6-value scorecard. Tests can
-  be saved directly from chat strip readings (via the "Save to History" button
-  on results cards) or from the Chemistry tab. Tap a
-  test to expand it and see the dosing instructions for that specific reading.
-- **Schedule tab** — fully editable maintenance tasks (add / edit / delete,
-  custom name + frequency + interval in days). Sorted by urgency with
-  overdue / due-today badges; checking one off resets its next-due date.
-- **Pool size** — set in ⚙ settings (gallons); all dosing scales to it.
+- **Chat tab — AI Pool Co-Pilot** — Powered by Claude Opus (for reasoning and learning) + Haiku (for image analysis).
+  - Attach a photo via 📷 or 📁: Claude analyzes test strips, pool water, equipment, algae, or anything else with specific actionable advice.
+  - Ask general questions: Claude remembers your pool's patterns (FC decay rates, pH drift, seasonal behavior) and gives advice tailored to YOUR pool, not generic advice.
+  - Learn together: The more you chat, the smarter Claude gets about your specific pool — anticipating problems, recognizing patterns, suggesting proactive maintenance.
+  - Full vision: No fake scan pipeline, images go directly to Claude for expert analysis.
+
+- **Chemistry tab** — Enter 6 readings (Free Chlorine, Total Chlorine, pH, Total Alkalinity, Calcium Hardness, Cyanuric Acid) and get exact chemical dosing scaled to pool size. Includes a chloramine check. An "↧ Last test" button pulls the most recent saved readings into the form.
+
+- **History tab** — Every test saved locally with a 6-value scorecard. Tests can be saved directly from chat strip readings (via the "Save to History" button on results cards) or from the Chemistry tab. Claude uses this history to recognize trends and give contextualized advice.
+
+- **Schedule tab** — Fully editable maintenance tasks (add / edit / delete, custom name + frequency + interval in days). Sorted by urgency with overdue / due-today badges.
+
+- **Pool size** — Set in ⚙ settings (gallons); all dosing and advice scales to it.
 
 ### How strip analysis works (v1.5.1+)
 
