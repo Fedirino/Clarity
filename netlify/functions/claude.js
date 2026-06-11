@@ -77,7 +77,7 @@ exports.handler = async (event) => {
   }
 
   // Only allow the models the app uses
-  const ALLOWED_MODELS = ['claude-opus-4-20250514', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001'];
+  const ALLOWED_MODELS = ['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001'];
   if (!ALLOWED_MODELS.includes(body.model)) {
     return { statusCode: 400, headers, body: JSON.stringify({ error: { message: 'Model "' + body.model + '" not allowed.' } }) };
   }
