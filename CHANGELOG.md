@@ -4,6 +4,67 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [2.2.0] — 2026-06-11
+
+### Enriched History (Phase 2)
+
+**Overview**: History entries now track what you DID, not just what the numbers were. Every reading can include the action you took, the amount, and context notes. Claude sees the full cause → effect chain and can tell you what's working.
+
+### Added
+- **Action tracking per reading**: Tap a history card to expand it, then tap an action chip:
+  - Added Chlorine, Shocked, pH Up, pH Down, Added Alkalinity, Backwashed, Brushed, Added CYA, Nothing
+  - Tap again to deselect
+- **Amount field**: Optional text field for dosage (e.g. "2 lbs", "1 gal muriatic acid")
+- **Notes field**: Optional context per reading (e.g. "pool party Saturday", "heavy rain", "gone for 2 weeks")
+- **Action summary on collapsed cards**: Shows a one-line summary (↳ Added Chlorine · 2 lbs · pool party) without expanding
+- **Cause → effect in Claude's context**: `buildHistoryContext()` now includes actions and notes. Claude can say "You added 2 lbs chlorine on Jun 8 → FC rose from 1.5 to 3.2 by Jun 10. That's working."
+
+### Changed
+- **`logReading()`**: Now initializes `action: null`, `actionAmt: ''`, `notes: ''` on every new entry
+- **`renderHistory()`**: Complete rewrite. Cards now show action summary when collapsed, and full action/notes editor when expanded. Click handlers updated to prevent card collapse when interacting with chips/inputs.
+- **`buildHistoryContext()`**: Updated prompt instructions to emphasize CAUSE-EFFECT patterns and action tracking
+- **History card expand/collapse**: Now triggers on header click only (not whole card), preventing accidental collapse when tapping action chips or typing in fields
+
+### Backward Compatible
+- Existing history entries without action/notes fields will work fine (they display as before, with empty action summary)
+
+---
+
+## [2.1.0] — 2026-06-11
+
+### Pool Profile (Phase 1)
+
+**Overview**: Added a full pool profile to Settings so Clarity knows the specifics of your pool. Every API call now includes your pool profile, enabling personalized advice from day one.
+
+### Added
+- **Pool Profile fields** in Settings (all tap-to-select chips):
+  - Pool size (gallons): 5k–30k options
+  - Sanitizer type: Chlorine, Salt, Mineral, Bromine
+  - Surface: Plaster, Vinyl, Fiberglass, Pebble/Aggregate
+  - Filter: Sand, Cartridge, DE
+  - Climate: Hot & Dry, Hot & Humid, Temperate, Cold/Seasonal
+  - Sun exposure: Full Sun, Partial Shade, Mostly Shade
+  - Water source: City/Municipal, Well
+  - Usage: Daily, Few times/week, Weekends only, Seasonal
+  - Equipment (multi-select): Heater, Salt Cell, Automation, Cover, UV/Ozone, Robot Cleaner
+- **Profile completion indicator**: Shows percentage complete in Settings header
+- **`buildProfileContext()`**: New function that generates a structured POOL PROFILE block injected into every API system prompt
+- **Profile persistence**: Saved to localStorage via `poolProfile` key
+- **Updated welcome message**: Prompts first-time users to set up their pool profile
+
+### Changed
+- **Settings panel redesigned**: Expanded from simple gallons selector to full pool profile with all fields
+- **System prompt injection**: Now includes pool profile context alongside history and notes
+- **Version bumped** from 2.0.0 → 2.1.0
+- **Old version archived** as `old-v2_0_0.html`
+
+### Why This Matters
+- Claude now knows your pool's sanitizer type, surface, filter, climate, sun exposure, water source, and usage patterns
+- Advice is personalized from the first conversation: "Your salt cell should be checked every 3 months" vs. generic "check your equipment"
+- Foundation for pattern learning: Claude can now reason about WHY your pool behaves the way it does based on these specifics
+
+---
+
 ## [2.0.0] — 2026-06-10
 
 ### Major Release: Personal AI Co-Pilot & Opus Integration
@@ -11,7 +72,7 @@ All notable changes to Clarity — Pool Assistant.
 **Overview**: Clarity graduates from a "test strip reader tool" to a "personal pool maintenance co-pilot." This release upgrades to Claude Opus for conversational reasoning and personalization, while keeping Haiku for fast image analysis. The system now learns your pool's patterns over time and gives increasingly personalized, anticipatory advice.
 
 ### Added
-- **Dual-model architecture**: `CHAT_MODEL` (claude-opus-4-20250514) for reasoning, pattern recognition, and learning; `STRIP_MODEL` (claude-haiku-4-5-20251001) for fast image analysis. The app auto-detects whether a message contains an image and routes to the appropriate model.
+- **Dual-model architecture**: `CHAT_MODEL` (claude-opus-4-6) for reasoning, pattern recognition, and learning; `STRIP_MODEL` (claude-haiku-4-5-20251001) for fast image analysis. The app auto-detects whether a message contains an image and routes to the appropriate model.
 - **Coaching/co-pilot system prompt**: Complete redesign of the system prompt. Claude now treats conversations as a collaborative partnership: "You are learning this person's pool alongside them. You remember patterns, anticipate problems, and improve your advice as you learn more over weeks and months."
 - **Learning & personalization section in system prompt**: New instructions for Claude to:
   - Compare each new reading to their historical baseline
@@ -36,7 +97,7 @@ All notable changes to Clarity — Pool Assistant.
 ### Technical Details
 - **No breaking changes**: All existing features work as before (strip scanning, manual entry, history, Chemistry tab, image re-attachment across turns).
 - **Chat history transfers seamlessly**: No migration needed.
-- **Model allowlist updated in Netlify function** (`netlify/functions/claude.js`): Added `claude-opus-4-20250514` to `ALLOWED_MODELS`.
+- **Model allowlist updated in Netlify function** (`netlify/functions/claude.js`): Added `claude-opus-4-6` to `ALLOWED_MODELS`.
 - **System prompt injection remains unchanged**: History context still injects via `buildHistoryContext()`; pool notes still injected via `S.poolNotes`.
 
 ### Why This Matters

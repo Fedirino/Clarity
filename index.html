@@ -231,7 +231,7 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v2.1.0</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v2.2.0</span></div>
   </div>
 </div>
 
@@ -408,7 +408,7 @@ function renderSetup(){
       <textarea id="poolNotesInput" style="width:100%;min-height:70px;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:11px;padding:10px 12px;color:var(--txt);font-size:13px;font-family:inherit;resize:vertical;line-height:1.5" placeholder="Anything else Clarity should know — e.g. 'has a slow leak', 'recently replastered', 'lots of trees nearby'…">${esc(S.poolNotes)}</textarea>
       <div class="hint">These notes are sent to Clarity with every message so it understands your pool's ongoing situation.</div></div>
 
-      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v2.1.0</div>
+      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v2.2.0</div>
     </div>`;
 
   // Gallon chips
@@ -579,17 +579,23 @@ function renderChem(b){
   if($('logBtn'))$('logBtn').onclick=()=>{logReading(S._draft);S.tab='history';render()};
 }
 
+const ACTIONS=['Added Chlorine','Shocked','pH Up','pH Down','Added Alkalinity','Backwashed','Brushed','Added CYA','Nothing'];
+
 function renderHistory(b){
   if(!S.history.length){b.innerHTML=`<div class="bin"><div class="empty"><div class="e">📋</div>
     <div class="mono" style="letter-spacing:1px;text-transform:uppercase;font-size:12px">No tests yet</div>
     <div style="font-size:12px;margin-top:6px">Send a strip photo in Chat or enter readings in Chemistry to start tracking.</div></div></div>`;return;}
   let html=`<div class="bin"><div class="mono" style="font-size:10px;color:var(--mut2);letter-spacing:1px;text-transform:uppercase;margin-bottom:12px">${S.history.length} test${S.history.length>1?'s':''} recorded</div>`;
-  S.history.forEach(e=>{
+  S.history.forEach((e,idx)=>{
     const d=new Date(e.timestamp);
     const ts=d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+' · '+d.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'});
     const issues=KEYS.filter(k=>{const v=e[k],r=IDEAL[k];return v!=null&&(v<r.min||v>r.max)});
     const ok=issues.length===0;
     const open=S.openHist===e.timestamp;
+
+    // Action summary line (shown when collapsed)
+    const actionSum=e.action?`<div style="font-size:11px;color:var(--aqua);margin-top:6px">↳ ${e.action}${e.actionAmt?' · '+e.actionAmt:''}${e.notes?' · '+e.notes:''}</div>`:'';
+
     let detail='';
     if(open){
       const doses=doseAdvice(e,e.gallons||S.gallons);
@@ -604,19 +610,68 @@ function renderHistory(b){
               <div class="serif" style="font-size:16px;color:var(--aqua2);margin:3px 0">${d.amt}</div>
               <div style="font-size:11.5px;color:var(--mut);line-height:1.5">${d.ex}</div></div>`}).join('')}</div>`;
       }
+
+      // Action tracking section
+      detail+=`<div style="margin-top:13px;padding-top:13px;border-top:1px solid var(--line)">
+        <div class="mono" style="font-size:9px;color:var(--mut2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:9px">What did you do?</div>
+        <div class="chips" style="margin-bottom:8px">${ACTIONS.map(a=>
+          `<button class="chip hist-action ${e.action===a?'on':''}" data-idx="${idx}" data-action="${a}">${a}</button>`).join('')}</div>
+        <input class="hist-amt" data-idx="${idx}" type="text" placeholder="Amount (e.g. 2 lbs, 1 gal acid)" value="${esc(e.actionAmt||'')}"
+          style="width:100%;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:9px;padding:8px 11px;color:var(--txt);font-size:12px;font-family:inherit;margin-bottom:8px">
+        <div class="mono" style="font-size:9px;color:var(--mut2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;margin-top:4px">Notes</div>
+        <input class="hist-notes" data-idx="${idx}" type="text" placeholder="Party, heavy rain, gone for a week…" value="${esc(e.notes||'')}"
+          style="width:100%;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:9px;padding:8px 11px;color:var(--txt);font-size:12px;font-family:inherit">
+      </div>`;
     }
     html+=`<div class="hcard" data-ts="${e.timestamp}" style="cursor:pointer"><div class="top"><span class="ts">${ts}</span>
       <span class="fl" style="color:${ok?'var(--green)':'var(--coral)'};background:${ok?'rgba(92,200,160,.1)':'rgba(236,138,114,.1)'}">${ok?'All ideal':issues.length+' issue'+(issues.length>1?'s':'')} <span style="opacity:.6">${open?'▴':'▾'}</span></span></div>
       <div class="h5">${KEYS.map(k=>{const v=e[k],c=color(v,k);
-        return `<div class="c"><div class="ck">${IDEAL[k].short}</div><div class="cv" style="color:${v!=null?c:'rgba(255,255,255,.15)'}">${v??'-'}</div></div>`}).join('')}</div>${detail}</div>`;
+        return `<div class="c"><div class="ck">${IDEAL[k].short}</div><div class="cv" style="color:${v!=null?c:'rgba(255,255,255,.15)'}">${v??'-'}</div></div>`}).join('')}</div>${actionSum}${detail}</div>`;
   });
   html+=`<button class="btn" id="clearBtn" style="background:none;border:1px solid rgba(236,138,114,.22);color:rgba(236,138,114,.6);font-size:10px;letter-spacing:1px;text-transform:uppercase;padding:11px 16px">Clear history</button></div>`;
   b.innerHTML=html;
-  b.querySelectorAll('.hcard').forEach(el=>el.onclick=()=>{
-    const ts=+el.dataset.ts;
-    S.openHist=S.openHist===ts?null:ts;
-    render();
+
+  // Card expand/collapse (only on header click)
+  b.querySelectorAll('.hcard').forEach(el=>{
+    el.querySelector('.top').onclick=(ev)=>{
+      ev.stopPropagation();
+      const ts=+el.dataset.ts;
+      S.openHist=S.openHist===ts?null:ts;
+      render();
+    };
   });
+
+  // Action chip clicks
+  b.querySelectorAll('.hist-action').forEach(btn=>{
+    btn.onclick=(ev)=>{
+      ev.stopPropagation();
+      const idx=+btn.dataset.idx;
+      const action=btn.dataset.action;
+      S.history[idx].action=S.history[idx].action===action?null:action;
+      persist();render();
+    };
+  });
+
+  // Amount fields
+  b.querySelectorAll('.hist-amt').forEach(el=>{
+    el.onclick=ev=>ev.stopPropagation();
+    el.onblur=()=>{
+      const idx=+el.dataset.idx;
+      S.history[idx].actionAmt=el.value.trim();
+      persist();
+    };
+  });
+
+  // Notes fields
+  b.querySelectorAll('.hist-notes').forEach(el=>{
+    el.onclick=ev=>ev.stopPropagation();
+    el.onblur=()=>{
+      const idx=+el.dataset.idx;
+      S.history[idx].notes=el.value.trim();
+      persist();
+    };
+  });
+
   $('clearBtn').onclick=()=>{if(confirm('Clear all history?')){S.history=[];persist();render()}};
 }
 
@@ -690,7 +745,7 @@ function closeScrim(id){$(id).classList.remove('on')}
 function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 
 function logReading(read){
-  const entry={timestamp:Date.now(),gallons:S.gallons};
+  const entry={timestamp:Date.now(),gallons:S.gallons,action:null,actionAmt:'',notes:''};
   KEYS.forEach(k=>entry[k]=read[k]??null);
   S.history=[entry,...S.history].slice(0,60);
   persist();
@@ -732,9 +787,12 @@ function buildHistoryContext(){
     });
     const issues=KEYS.filter(k=>{const v=e[k];return v!=null&&statusOf(v,k)!=='OK';});
     const note=issues.length===0?'all OK':issues.map(k=>IDEAL[k].short+' '+statusOf(e[k],k).toLowerCase()).join(', ');
-    ctx+='• '+ds+' — '+flags.join(' · ')+' — '+note+'\n';
+    ctx+='• '+ds+' — '+flags.join(' · ')+' — '+note;
+    if(e.action)ctx+=' | Action: '+e.action+(e.actionAmt?' ('+e.actionAmt+')':'');
+    if(e.notes)ctx+=' | Notes: '+e.notes;
+    ctx+='\n';
   });
-  ctx+='Use this history to spot TRENDS (recurring issues, improving/worsening parameters). Compare today\'s reading to past ones and mention any patterns (e.g. "your pH has been high the last 3 tests"). If everything matches prior readings, say so briefly.';
+  ctx+='Use this history to spot TRENDS and CAUSE-EFFECT patterns. Compare today\'s reading to past ones. When the user logged an action (e.g. "Added Chlorine · 2 lbs"), check if the NEXT reading shows the expected result. Point out what\'s working and what isn\'t.';
   return ctx;
 }
 const REF_CHART_MEDIA='image/jpeg';
