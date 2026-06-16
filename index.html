@@ -61,7 +61,7 @@ textarea:focus,input:focus,select:focus{outline:none}
 @keyframes wvflow{to{transform:translateX(-50%)}}
 .tabwrap{display:flex;justify-content:center;padding-bottom:14px}
 
-.setup{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px;margin-bottom:12px;animation:fadeIn .25s}
+.setup{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px;margin-bottom:12px;animation:fadeIn .25s;max-height:60vh;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .setup .lab{font-size:10px;color:var(--mut);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:9px}
 .chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
 .chip{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 12px;color:var(--mut);font-size:11px;cursor:pointer;transition:.2s;font-family:'DM Mono',monospace}
@@ -369,7 +369,10 @@ function renderSetup(){
     <div class="setup">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <div style="font-size:14px;font-weight:600;letter-spacing:.3px">🏊 Pool Profile</div>
-        <div style="font-size:10px;color:${pct===100?'var(--green)':'var(--mut2)'};font-family:'DM Mono',monospace">${pct}% complete</div>
+        <div style="display:flex;align-items:center;gap:12px">
+          <div style="font-size:10px;color:${pct===100?'var(--green)':'var(--mut2)'};font-family:'DM Mono',monospace">${pct}%</div>
+          <button id="closeSetup" style="background:none;border:1px solid var(--line);border-radius:8px;color:var(--mut);font-size:14px;cursor:pointer;padding:2px 8px;transition:.2s">✕</button>
+        </div>
       </div>
       ${pct<100?'<div class="hint" style="margin-bottom:14px;color:var(--aqua)">Fill out your pool profile so Clarity can give advice specific to YOUR pool — not generic tips.</div>':''}
 
@@ -427,6 +430,10 @@ function renderSetup(){
   // Notes
   const notesEl=$('poolNotesInput');
   if(notesEl)notesEl.onblur=()=>{S.poolNotes=notesEl.value.trim();persist();};
+
+  // Close button
+  const closeBtn=$('closeSetup');
+  if(closeBtn)closeBtn.onclick=()=>{S.setupOpen=false;renderSetup();};
 }
 
 function render(){
