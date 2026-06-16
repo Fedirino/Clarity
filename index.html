@@ -231,7 +231,7 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v2.0.0</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v2.1.0</span></div>
   </div>
 </div>
 
@@ -316,7 +316,11 @@ let S={
   history: store.get('history')||[],
   tasks: store.get('tasks')||defaultTasks(),
   poolNotes: store.get('poolNotes')||'',
-  messages:[{role:'assistant',content:"Hi! I'm Clarity, your pool assistant.\n\nFor test strips I'm set up for AquaChek 7-Way (Aqua 7). I compare your photo against the official Aqua 7 color chart and give honest estimates — usually a range, since strips aren't lab-precise — then tell you what to add for your pool size.\n\n📷 Snap or 📁 upload a strip in even, indirect light (no flash), then send. I can also look at algae, cloudy water, or equipment. If a pad is unclear I'll say so rather than guess."}],
+  poolProfile: store.get('poolProfile')||{
+    type:null, surface:null, filter:null, climate:null,
+    sun:null, water:null, usage:null, equipment:[]
+  },
+  messages:[{role:'assistant',content:"Hi! I'm Clarity, your personal pool co-pilot.\n\nI learn your pool's patterns over time and give advice specific to YOUR pool — not generic tips.\n\n**First time?** Tap ⚙ to set up your pool profile so I can give you personalized advice from day one.\n\n📷 Snap or 📁 upload a test strip in even, indirect light (no flash), then send. I can also look at algae, cloudy water, or equipment. If a pad is unclear I'll say so rather than guess."}],
   tab:'chat', thinking:false, setupOpen:false, editTask:null,
   _pendingImage:null,
 };
@@ -332,7 +336,7 @@ function defaultTasks(){
     {id:7,t:'Inspect equipment & water level',freq:'Weekly',int:7,last:now-6*day,done:false},
   ];
 }
-function persist(){store.set('gallons',S.gallons);store.set('history',S.history);store.set('tasks',S.tasks);store.set('poolNotes',S.poolNotes);}
+function persist(){store.set('gallons',S.gallons);store.set('history',S.history);store.set('tasks',S.tasks);store.set('poolNotes',S.poolNotes);store.set('poolProfile',S.poolProfile);}
 
 const $=id=>document.getElementById(id);
 const TABS=[['chat','Chat'],['chem','Chemistry'],['history','History'],['schedule','Schedule']];
@@ -353,18 +357,74 @@ function renderSetup(){
   const el=$('setup');
   if(!S.setupOpen){el.style.display='none';return;}
   el.style.display='block';
+  const P=S.poolProfile;
+  const profileComplete=[P.type,P.surface,P.filter,P.climate,P.sun,P.water,P.usage].filter(Boolean).length;
+  const pct=Math.round(profileComplete/7*100);
+  const chipSet=(field,options,multi)=>options.map(o=>{
+    const on=multi?(P[field]||[]).includes(o):P[field]===o;
+    return `<button class="chip ${on?'on':''}" data-field="${field}" data-val="${o}" data-multi="${multi||''}">${o}</button>`;
+  }).join('');
+
   el.innerHTML=`
     <div class="setup">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+        <div style="font-size:14px;font-weight:600;letter-spacing:.3px">🏊 Pool Profile</div>
+        <div style="font-size:10px;color:${pct===100?'var(--green)':'var(--mut2)'};font-family:'DM Mono',monospace">${pct}% complete</div>
+      </div>
+      ${pct<100?'<div class="hint" style="margin-bottom:14px;color:var(--aqua)">Fill out your pool profile so Clarity can give advice specific to YOUR pool — not generic tips.</div>':''}
+
       <div class="lab">Pool size (gallons)</div>
-      <div class="chips">${[8000,12000,15000,20000,25000,30000].map(g=>
-        `<button class="chip ${S.gallons===g?'on':''}" data-g="${g}">${(g/1000)}k</button>`).join('')}</div>
-      <div class="hint">Dosing amounts scale to your pool size. Pick the closest match.</div>
+      <div class="chips">${[5000,8000,10000,12000,15000,20000,25000,30000].map(g=>
+        `<button class="chip ${S.gallons===g?'on':''}" data-g="${g}">${g>=1000?(g/1000)+'k':g}</button>`).join('')}</div>
+
+      <div class="lab">Sanitizer type</div>
+      <div class="chips">${chipSet('type',['Chlorine','Salt','Mineral','Bromine'])}</div>
+
+      <div class="lab">Surface</div>
+      <div class="chips">${chipSet('surface',['Plaster','Vinyl','Fiberglass','Pebble/Aggregate'])}</div>
+
+      <div class="lab">Filter</div>
+      <div class="chips">${chipSet('filter',['Sand','Cartridge','DE'])}</div>
+
+      <div class="lab">Climate</div>
+      <div class="chips">${chipSet('climate',['Hot & Dry','Hot & Humid','Temperate','Cold/Seasonal'])}</div>
+
+      <div class="lab">Sun exposure</div>
+      <div class="chips">${chipSet('sun',['Full Sun','Partial Shade','Mostly Shade'])}</div>
+
+      <div class="lab">Water source</div>
+      <div class="chips">${chipSet('water',['City/Municipal','Well'])}</div>
+
+      <div class="lab">Usage</div>
+      <div class="chips">${chipSet('usage',['Daily','Few times/week','Weekends only','Seasonal'])}</div>
+
+      <div class="lab">Equipment <span style="color:var(--mut2);text-transform:none;letter-spacing:0">(select all that apply)</span></div>
+      <div class="chips">${chipSet('equipment',['Heater','Salt Cell','Automation','Cover','UV/Ozone','Robot Cleaner'],true)}</div>
+
       <div style="margin-top:16px"><div class="lab">Pool notes & conditions</div>
-      <textarea id="poolNotesInput" style="width:100%;min-height:70px;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:11px;padding:10px 12px;color:var(--txt);font-size:13px;font-family:inherit;resize:vertical;line-height:1.5" placeholder="Describe your pool's situation — e.g. 'has a leak, hard to keep balanced', 'salt water system', 'in full sun, no cover', 'recently replastered'…">${esc(S.poolNotes)}</textarea>
-      <div class="hint">These notes are sent to Clarity with every message so it understands your pool's ongoing situation and can give better advice.</div></div>
-      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v2.0.0</div>
+      <textarea id="poolNotesInput" style="width:100%;min-height:70px;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:11px;padding:10px 12px;color:var(--txt);font-size:13px;font-family:inherit;resize:vertical;line-height:1.5" placeholder="Anything else Clarity should know — e.g. 'has a slow leak', 'recently replastered', 'lots of trees nearby'…">${esc(S.poolNotes)}</textarea>
+      <div class="hint">These notes are sent to Clarity with every message so it understands your pool's ongoing situation.</div></div>
+
+      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v2.1.0</div>
     </div>`;
-  el.querySelectorAll('.chip').forEach(c=>c.onclick=()=>{S.gallons=+c.dataset.g;persist();renderSetup();renderTabs();render()});
+
+  // Gallon chips
+  el.querySelectorAll('.chip[data-g]').forEach(c=>c.onclick=()=>{S.gallons=+c.dataset.g;persist();renderSetup();renderTabs();render()});
+
+  // Profile chips
+  el.querySelectorAll('.chip[data-field]').forEach(c=>c.onclick=()=>{
+    const f=c.dataset.field, v=c.dataset.val, multi=c.dataset.multi;
+    if(multi){
+      const arr=P[f]||[];
+      if(arr.includes(v))P[f]=arr.filter(x=>x!==v);
+      else P[f]=[...arr,v];
+    }else{
+      P[f]=P[f]===v?null:v; // tap again to deselect
+    }
+    persist();renderSetup();
+  });
+
+  // Notes
   const notesEl=$('poolNotesInput');
   if(notesEl)notesEl.onblur=()=>{S.poolNotes=notesEl.value.trim();persist();};
 }
@@ -633,6 +693,21 @@ function logReading(read){
 const CHAT_MODEL='claude-opus-4-6'; // Reasoning, patterns, learning
 const STRIP_MODEL='claude-haiku-4-5-20251001'; // Fast image analysis
 
+function buildProfileContext(){
+  const P=S.poolProfile;
+  const parts=[];
+  if(P.type)parts.push('Sanitizer: '+P.type);
+  if(P.surface)parts.push('Surface: '+P.surface);
+  if(P.filter)parts.push('Filter: '+P.filter);
+  if(P.climate)parts.push('Climate: '+P.climate);
+  if(P.sun)parts.push('Sun: '+P.sun);
+  if(P.water)parts.push('Water source: '+P.water);
+  if(P.usage)parts.push('Usage: '+P.usage);
+  if(P.equipment&&P.equipment.length)parts.push('Equipment: '+P.equipment.join(', '));
+  if(!parts.length)return'';
+  return'\n\nPOOL PROFILE:\n'+parts.join('\n');
+}
+
 function buildHistoryContext(){
   if(!S.history.length)return'';
   const recent=S.history.slice(0,8);
@@ -828,12 +903,13 @@ async function sendMessage(text){
     }
     const systemPrompt=SYSTEM.replace('{POOL_SIZE}',S.gallons.toLocaleString());
     const historyCtx=buildHistoryContext();
+    const profileCtx=buildProfileContext();
     const notesCtx=S.poolNotes?`\n\nPOOL NOTES (owner's description of their pool situation — factor this into every answer):\n${S.poolNotes}`:'';
     // Use Haiku for strip/image analysis (fast), Opus for reasoning/learning (chat)
     const hasImage=api.some(m=>Array.isArray(m.content)&&m.content.some(c=>c.type==='image'));
     const model=hasImage?STRIP_MODEL:CHAT_MODEL;
     const reply=await callClaude({model,max_tokens:2000,
-      system:systemPrompt+`\nUser's pool: inground, ~${S.gallons.toLocaleString()} gallons.`+notesCtx+historyCtx,messages:api});
+      system:systemPrompt+`\nUser's pool: inground, ~${S.gallons.toLocaleString()} gallons.`+profileCtx+notesCtx+historyCtx,messages:api});
     S.messages.push({role:'assistant',content:reply});
   }catch(e){S.messages.push({role:'assistant',content:`⚠ ${e.message}`});}
   S.thinking=false;render();
