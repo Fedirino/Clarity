@@ -231,7 +231,7 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v2.2.0</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v2.3.0</span></div>
   </div>
 </div>
 
@@ -321,7 +321,7 @@ let S={
     sun:null, water:null, usage:null, equipment:[]
   },
   messages:[{role:'assistant',content:"Hi! I'm Clarity, your personal pool co-pilot.\n\nI learn your pool's patterns over time and give advice specific to YOUR pool — not generic tips.\n\n**First time?** Tap ⚙ to set up your pool profile so I can give you personalized advice from day one.\n\n📷 Snap or 📁 upload a test strip in even, indirect light (no flash), then send. I can also look at algae, cloudy water, or equipment. If a pad is unclear I'll say so rather than guess."}],
-  tab:'chat', thinking:false, setupOpen:false, editTask:null,
+  tab:'dash', thinking:false, setupOpen:false, editTask:null,
   _pendingImage:null,
 };
 function defaultTasks(){
@@ -339,7 +339,7 @@ function defaultTasks(){
 function persist(){store.set('gallons',S.gallons);store.set('history',S.history);store.set('tasks',S.tasks);store.set('poolNotes',S.poolNotes);store.set('poolProfile',S.poolProfile);}
 
 const $=id=>document.getElementById(id);
-const TABS=[['chat','Chat'],['chem','Chemistry'],['history','History'],['schedule','Schedule']];
+const TABS=[['dash','Dashboard'],['chat','Chat'],['chem','Chemistry'],['history','History'],['schedule','Schedule']];
 
 const WAVE=`<svg class="wv" viewBox="0 0 120 40" preserveAspectRatio="none"><path d="M0 12 Q15 3 30 12 T60 12 T90 12 T120 12 V40 H0 Z" fill="#5bc6dc"/><path d="M0 12 Q15 3 30 12 T60 12 T90 12 T120 12" fill="none" stroke="#aef2ee" stroke-width="2" opacity=".8"/></svg>`;
 const AV=`<svg width="20" height="20" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 6C20 6 9 17 9 25a11 11 0 0 0 22 0C31 17 20 6 20 6Z" fill="#eafcfb"/><circle cx="15" cy="20" r="3.6" fill="#cdeff2" stroke="#0d7390" stroke-width="1.6"/><circle cx="25" cy="20" r="3.6" fill="#cdeff2" stroke="#0d7390" stroke-width="1.6"/><path d="M18.6 20h2.8" stroke="#0d7390" stroke-width="1.6"/><path d="M14 27q6 3 12 0" fill="none" stroke="#0d7390" stroke-width="1.8" stroke-linecap="round"/></svg>`;
@@ -408,7 +408,7 @@ function renderSetup(){
       <textarea id="poolNotesInput" style="width:100%;min-height:70px;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:11px;padding:10px 12px;color:var(--txt);font-size:13px;font-family:inherit;resize:vertical;line-height:1.5" placeholder="Anything else Clarity should know — e.g. 'has a slow leak', 'recently replastered', 'lots of trees nearby'…">${esc(S.poolNotes)}</textarea>
       <div class="hint">These notes are sent to Clarity with every message so it understands your pool's ongoing situation.</div></div>
 
-      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v2.2.0</div>
+      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v2.3.0</div>
     </div>`;
 
   // Gallon chips
@@ -439,7 +439,8 @@ function renderSetup(){
 function render(){
   renderTabs();renderSetup();
   const b=$('body');
-  if(S.tab==='chat')renderChat(b);
+  if(S.tab==='dash')renderDash(b);
+  else if(S.tab==='chat')renderChat(b);
   else if(S.tab==='chem')renderChem(b);
   else if(S.tab==='history')renderHistory(b);
   else if(S.tab==='schedule')renderSchedule(b);
@@ -494,6 +495,150 @@ function renderResultsCard(readings,msgIdx){
   h+=`<button class="rcard-save" data-msgidx="${msgIdx}" ${saved?'disabled':''}>${saved?'✓ Saved to History':'💾 Save to History'}</button>`;
   h+=`</div>`;
   return h;
+}
+
+function buildSparkline(key,w,h){
+  const pts=S.history.slice(0,15).reverse().filter(e=>e[key]!=null);
+  if(pts.length<2)return'';
+  const vals=pts.map(e=>e[key]);
+  const mn=Math.min(...vals),mx=Math.max(...vals);
+  const range=mx-mn||1;
+  const r=IDEAL[key];
+  // ideal band
+  const y1=h-((r.max-mn)/range)*h;
+  const y2=h-((r.min-mn)/range)*h;
+  let svg=`<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" style="display:block">`;
+  svg+=`<rect x="0" y="${Math.max(0,y1)}" width="${w}" height="${Math.min(h,y2)-Math.max(0,y1)}" fill="rgba(92,200,160,.12)" rx="2"/>`;
+  const points=vals.map((v,i)=>{
+    const x=(i/(vals.length-1))*w;
+    const y=h-((v-mn)/range)*h;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  svg+=`<polyline points="${points.join(' ')}" fill="none" stroke="var(--aqua)" stroke-width="1.5" stroke-linejoin="round"/>`;
+  // dots on last point
+  const last=points[points.length-1];
+  svg+=`<circle cx="${last.split(',')[0]}" cy="${last.split(',')[1]}" r="2.5" fill="var(--aqua)"/>`;
+  svg+=`</svg>`;
+  return svg;
+}
+
+function renderDash(b){
+  const latest=S.history[0];
+  const hasData=!!latest;
+
+  // Health score
+  let score=0,measured=0,swimStatus='unknown';
+  if(hasData){
+    KEYS.forEach(k=>{
+      if(latest[k]!=null){
+        measured++;
+        const st=statusOf(latest[k],k);
+        if(st==='OK')score++;
+      }
+    });
+    score=measured?Math.round((score/measured)*100):0;
+
+    // Swim safety based on FC and pH
+    const fc=latest.chlorine,ph=latest.ph;
+    if(fc!=null&&fc<0.5)swimStatus='danger';
+    else if(ph!=null&&(ph<6.8||ph>8.0))swimStatus='danger';
+    else if(fc!=null&&fc<1)swimStatus='caution';
+    else if(ph!=null&&(ph<7.0||ph>7.8))swimStatus='caution';
+    else if(fc!=null)swimStatus='safe';
+  }
+
+  // Days since last test
+  let daysSince='—';
+  if(hasData){
+    const diff=Math.floor((Date.now()-latest.timestamp)/864e5);
+    daysSince=diff===0?'Today':diff===1?'Yesterday':diff+' days ago';
+  }
+
+  const swimIcon=swimStatus==='safe'?'🏊':swimStatus==='caution'?'⚠️':swimStatus==='danger'?'🚫':'❓';
+  const swimLabel=swimStatus==='safe'?'Safe to swim':swimStatus==='caution'?'Use caution':swimStatus==='danger'?'Do not swim':'No data yet';
+  const swimColor=swimStatus==='safe'?'var(--green)':swimStatus==='caution'?'#f0c040':swimStatus==='danger'?'var(--coral)':'var(--mut2)';
+  const scoreColor=score>=80?'var(--green)':score>=50?'#f0c040':'var(--coral)';
+
+  let html=`<div class="bin">`;
+
+  // Top row: Health Score + Swim Status
+  html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+    <div class="formcard" style="text-align:center;padding:18px 12px;margin:0">
+      <div style="font-size:36px;font-weight:700;color:${hasData?scoreColor:'var(--mut2)'};font-family:'Playfair Display',serif;line-height:1">${hasData?score:'—'}</div>
+      <div class="mono" style="font-size:9px;color:var(--mut2);letter-spacing:1.5px;text-transform:uppercase;margin-top:6px">Pool Health</div>
+    </div>
+    <div class="formcard" style="text-align:center;padding:18px 12px;margin:0">
+      <div style="font-size:30px;line-height:1">${swimIcon}</div>
+      <div style="font-size:11px;color:${swimColor};font-weight:600;margin-top:6px">${swimLabel}</div>
+    </div>
+  </div>`;
+
+  // Last tested
+  html+=`<div class="formcard" style="display:flex;justify-content:space-between;align-items:center;padding:13px 16px;margin-bottom:12px">
+    <div><div class="mono" style="font-size:9px;color:var(--mut2);letter-spacing:1.5px;text-transform:uppercase">Last tested</div>
+      <div style="font-size:14px;margin-top:3px;font-weight:500">${daysSince}</div></div>
+    <button class="chip on" onclick="S.tab='chat';render()">Test now →</button>
+  </div>`;
+
+  if(hasData){
+    // Current readings
+    html+=`<div class="mono" style="font-size:9px;color:var(--mut2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;margin-top:16px">Current Readings</div>`;
+    html+=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">`;
+    KEYS.forEach(k=>{
+      const v=latest[k];
+      const c=color(v,k);
+      const r=IDEAL[k];
+      const st=statusOf(v,k);
+      const badge=st==='OK'?'':st==='LOW'?' ↓':' ↑';
+      html+=`<div class="formcard" style="text-align:center;padding:12px 8px;margin:0">
+        <div class="mono" style="font-size:9px;color:var(--mut2);letter-spacing:1px">${r.short}</div>
+        <div style="font-size:22px;font-weight:700;color:${c};font-family:'Playfair Display',serif;margin:4px 0">${v??'—'}${badge}</div>
+        <div style="font-size:9px;color:var(--mut2)">${r.min}–${r.max}${r.unit?' '+r.unit:''}</div>
+      </div>`;
+    });
+    html+=`</div>`;
+
+    // Sparklines for key params
+    const sparkKeys=['chlorine','ph','alkalinity'];
+    const sparkData=sparkKeys.filter(k=>S.history.filter(e=>e[k]!=null).length>=2);
+    if(sparkData.length){
+      html+=`<div class="mono" style="font-size:9px;color:var(--mut2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px">Trends (last 15 tests)</div>`;
+      sparkData.forEach(k=>{
+        const r=IDEAL[k];
+        const lastVal=latest[k];
+        html+=`<div class="formcard" style="padding:12px 14px;margin-bottom:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <span style="font-size:12px;font-weight:500">${r.label}</span>
+            <span style="font-size:13px;font-weight:600;color:${color(lastVal,k)}">${lastVal??'—'} ${r.unit}</span>
+          </div>
+          ${buildSparkline(k,280,40)}
+        </div>`;
+      });
+    }
+
+    // Recent actions timeline
+    const withActions=S.history.filter(e=>e.action).slice(0,5);
+    if(withActions.length){
+      html+=`<div class="mono" style="font-size:9px;color:var(--mut2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;margin-top:16px">Recent Actions</div>`;
+      withActions.forEach(e=>{
+        const d=new Date(e.timestamp);
+        const ds=d.toLocaleDateString('en-US',{month:'short',day:'numeric'});
+        html+=`<div style="display:flex;gap:10px;align-items:baseline;margin-bottom:6px;font-size:12px">
+          <span class="mono" style="color:var(--mut2);font-size:10px;min-width:45px">${ds}</span>
+          <span style="color:var(--aqua)">${e.action}</span>
+          ${e.actionAmt?`<span style="color:var(--mut)">· ${e.actionAmt}</span>`:''}
+          ${e.notes?`<span style="color:var(--mut2);font-style:italic">· ${e.notes}</span>`:''}
+        </div>`;
+      });
+    }
+  } else {
+    html+=`<div class="empty"><div class="e">📊</div>
+      <div class="mono" style="letter-spacing:1px;text-transform:uppercase;font-size:12px">No data yet</div>
+      <div style="font-size:12px;margin-top:6px">Test your water to see your dashboard. Tap <strong>Chat</strong> to scan a strip or <strong>Chemistry</strong> to enter readings.</div></div>`;
+  }
+
+  html+=`</div>`;
+  b.innerHTML=html;
 }
 
 function renderChat(b){
