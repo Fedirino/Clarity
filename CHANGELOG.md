@@ -4,6 +4,113 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [3.0.0] — 2026-06-11
+
+### Polish & Delight (Phase 5) — Major Release
+
+**Overview**: Clarity v3.0 is the complete personal pool co-pilot. This release adds smart context-aware prompts, export functionality, a "Generate Pool Manual" feature, onboarding nudges, and branding refinements. All five phases of the roadmap are now complete.
+
+### Added
+- **Smart Suggested Prompts on Dashboard**: Context-aware question chips based on your current pool state:
+  - If FC is low → "How do I raise my chlorine?"
+  - If pH is high → "Why does my pH keep rising?"
+  - If it's been 3+ days since last test → "Should I test today?"
+  - If 5+ readings exist → "How is my pool doing overall?"
+  - If 3+ readings exist → "What patterns do you see?"
+  - Tapping a prompt navigates to Chat and auto-sends the question to Claude
+- **Export Pool Report**: "📋 Export Report" button on Dashboard. Generates a full text report including pool profile, last 20 test readings with statuses, actions, and notes. Copies to clipboard (or downloads as .txt fallback).
+- **Generate Pool Manual**: "📖 Pool Manual" button on Dashboard. Sends a detailed prompt to Claude asking it to write a comprehensive, personalized maintenance manual covering: pool specs, ideal ranges, maintenance schedule, chemicals & dosing, seasonal tips, common issues, and observed patterns. Specific to YOUR pool.
+- **Onboarding Nudge**: If pool profile is less than 100% complete, a card appears at the bottom of the Dashboard showing progress (e.g. "3/7 fields") with a "Set up →" button linking directly to settings.
+
+### Changed
+- **Branding updated**: "Pool Assistant" → "Pool Co-Pilot" throughout (page title, header subtitle)
+- **Dashboard enhanced**: Now includes Ask Clarity prompts section, Export/Manual buttons, and onboarding nudge
+- **Version bumped** from 2.4.0 → 3.0.0
+
+### Roadmap Complete
+- ✅ Phase 1: Pool Profile (v2.1)
+- ✅ Phase 2: Enriched History (v2.2)
+- ✅ Phase 3: Visual Dashboard (v2.3)
+- ✅ Phase 4: Smart Assistant (v2.4)
+- ✅ Phase 5: Polish & Delight (v3.0)
+
+---
+
+## [2.4.0] — 2026-06-11
+
+### Smart Assistant (Phase 4)
+
+**Overview**: Clarity now computes patterns from your history data and feeds them to Claude alongside every message. Claude can now reference your FC decay rate, pH trends, test frequency, action effectiveness, and recurring issues — giving data-driven, predictive advice specific to YOUR pool.
+
+### Added
+- **`buildInsightsContext()`**: New function that computes and injects the following into every API call:
+  - **FC decay rate**: Calculates average ppm/day loss between readings (excluding chlorine additions)
+  - **pH trend**: Rising, falling, or stable with actual values
+  - **Test frequency**: Average days between tests
+  - **Days since last test**: Exact count
+  - **Action effectiveness**: Before/after FC comparisons when chlorine was added (with amounts)
+  - **Recurring issues**: Parameters that are out of range 3+ times in last 15 tests
+  - **Current status**: Which params are ideal vs. out of range
+
+- **Dashboard Insights section**: Visual display of computed patterns:
+  - 📉 FC decay rate per day
+  - 📈/📉/➡️ pH trend direction with values
+  - 🗓️ Average testing frequency
+  - 🔁 Recurring issues with counts
+  - ⏰ **Next test prediction**: "FC reaches minimum in ~X days — test by then"
+
+- **Enhanced system prompt — PROACTIVE COACHING section**:
+  - **Pattern Recognition**: Claude references computed decay rates and drift, not generic advice
+  - **Anomaly Detection**: Flags readings that contradict established patterns
+  - **Predictive Guidance**: Uses decay rates to predict when next action is needed
+  - **Before/After Tracking**: Evaluates whether chlorine additions worked
+  - **Recurring Issues**: Addresses root causes, not just symptoms
+  - **Test Frequency**: Suggests adjustments based on pool behavior
+  - **Seasonal Awareness**: Factors current date + climate + patterns
+
+### Changed
+- **System prompt**: Added 7-point PROACTIVE COACHING section with specific instructions for each smart behavior
+- **API call**: Now injects `insightsCtx` alongside profile, notes, and history
+- **Dashboard**: Added Insights card below Recent Actions showing computed patterns and predictions
+- **Version bumped** from 2.3.0 → 2.4.0
+
+### Example Conversations Enabled
+- *"Your FC drops ~0.5 ppm/day. At 2.8 now, you'll hit the minimum in about 4 days. Test Wednesday."*
+- *"You added 2 lbs chlorine last time and FC rose 1.7 ppm. That dosage works well for your 15k gallon pool."*
+- *"pH has been high in 4 of your last 10 tests. With your city water and full sun, this is likely caused by CO₂ offgassing. Consider adding a small amount of muriatic acid weekly as prevention."*
+- *"You normally test every 4 days, but it's been 6. With summer heat, I'd test today."*
+
+---
+
+## [2.3.0] — 2026-06-11
+
+### Visual Dashboard (Phase 3)
+
+**Overview**: New Dashboard tab shows your pool's health at a glance — health score, swim safety status, current readings, trend sparklines, and recent actions. Dashboard is now the default landing tab.
+
+### Added
+- **Dashboard tab** (new first tab, now the default):
+  - **Pool Health Score** (0–100): Based on how many parameters are in the ideal range from your most recent reading. Color-coded green/yellow/red.
+  - **Swim Status**: 🏊 Safe to Swim / ⚠️ Use Caution / 🚫 Do Not Swim. Based on Free Chlorine and pH levels.
+  - **Last Tested**: Shows days since last test with a "Test now →" quick link to Chat.
+  - **Current Readings**: 6-card grid showing each parameter's value, color-coded (green=OK, blue=LOW, coral=HIGH) with ideal range below.
+  - **Trend Sparklines**: SVG sparkline charts for FC, pH, and Alkalinity showing last 15 readings with ideal range band highlighted in green.
+  - **Recent Actions Timeline**: Last 5 logged actions with dates, amounts, and notes.
+  - **Empty state**: Friendly message when no data exists yet, pointing to Chat and Chemistry tabs.
+- **`buildSparkline(key, w, h)`**: New function that generates inline SVG sparkline charts from history data. Shows ideal range band, data polyline, and latest-value dot.
+
+### Changed
+- **Default tab**: Changed from 'chat' to 'dash' — users land on the dashboard first.
+- **Tab order**: Dashboard → Chat → Chemistry → History → Schedule
+- **Version bumped** from 2.2.0 → 2.3.0
+
+### Swim Safety Logic
+- **🚫 Do Not Swim**: FC < 0.5 ppm OR pH < 6.8 or > 8.0
+- **⚠️ Use Caution**: FC 0.5–1.0 ppm OR pH 7.0–7.2 or 7.6–7.8
+- **🏊 Safe to Swim**: FC ≥ 1.0 ppm AND pH 7.0–7.8
+
+---
+
 ## [2.2.0] — 2026-06-11
 
 ### Enriched History (Phase 2)

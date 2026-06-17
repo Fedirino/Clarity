@@ -3,12 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Clarity — Pool Assistant</title>
+<title>Clarity — Pool Co-Pilot</title>
 <meta name="theme-color" content="#0b1a26">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Clarity">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230d7390'/%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cpath d='M4 13 q4 -5 8 0 t8 0 t8 0' stroke='%23eafcfb' stroke-width='2.5'/%3E%3Cpath d='M4 20 q4 -5 8 0 t8 0 t8 0' stroke='%23aef2ee' stroke-width='2.5' opacity='0.7'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="icon" type="image/png" sizes="32x32" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAxUlEQVR4nO2WMQ6DMAxF/wV6Wi7CSTr1VAwMrCC1UxEK8c+3SdRKJJKn8Pyf7AwA5DyG8V2jWAY9XaAL3EOgVkhYzvPxtK17RcJyvCxwhCMSFi8J5GCPBOPdApFVMB6lJixIkSjxUAJa3ksCLScEz46fy/z6VuSN5PiTgPXKj3Da5AoP1oTBioTCg43SGp26CoVH2iStXJByp/JQAlreSwItJwTPjksSEf4kYL1yVcDLgzVRwq/yVf+WrPD//ifsAl3g1wIf73r3FbJNUS8AAAAASUVORK5CYII=">
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230d7390'/%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cpath d='M30 78 q22 -26 44 0 t44 0 t44 0' stroke='%23eafcfb' stroke-width='12'/%3E%3Cpath d='M30 110 q22 -26 44 0 t44 0 t44 0' stroke='%23aef2ee' stroke-width='12' opacity='0.7'/%3E%3C/g%3E%3C/svg%3E">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@400;500;600&family=DM+Mono&display=swap');
@@ -207,7 +209,7 @@ textarea:focus,input:focus,select:focus{outline:none}
     <div class="hrow">
       <div class="logo">
         <div class="ic"><svg width="22" height="13" viewBox="0 0 48 26" aria-label="Clarity"><path d="M2 8 q6 -7 12 0 t12 0 t12 0 t12 0" fill="none" stroke="#eafcfb" stroke-width="3" stroke-linecap="round"/><path d="M2 17 q6 -7 12 0 t12 0 t12 0 t12 0" fill="none" stroke="#aef2ee" stroke-width="3" stroke-linecap="round" opacity=".7"/></svg></div>
-        <div><div class="ti serif">Clarity</div><div class="sub">Pool Assistant</div></div>
+        <div><div class="ti serif">Clarity</div><div class="sub">Pool Co-Pilot</div></div>
       </div>
       <button class="gear mono" id="gearBtn">⚙ <span id="gLabel">15,000g</span></button>
     </div>
@@ -231,7 +233,7 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v2.4.0</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v3.0.0</span></div>
   </div>
 </div>
 
@@ -408,7 +410,7 @@ function renderSetup(){
       <textarea id="poolNotesInput" style="width:100%;min-height:70px;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:11px;padding:10px 12px;color:var(--txt);font-size:13px;font-family:inherit;resize:vertical;line-height:1.5" placeholder="Anything else Clarity should know — e.g. 'has a slow leak', 'recently replastered', 'lots of trees nearby'…">${esc(S.poolNotes)}</textarea>
       <div class="hint">These notes are sent to Clarity with every message so it understands your pool's ongoing situation.</div></div>
 
-      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v2.4.0</div>
+      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v3.0.0</div>
     </div>`;
 
   // Gallon chips
@@ -702,14 +704,105 @@ function renderDash(b){
         html+=`</div>`;
       }
     }
+
+    // Smart suggested prompts (context-aware)
+    const prompts=[];
+    if(latest){
+      const daysSinceNum=Math.floor((Date.now()-latest.timestamp)/864e5);
+      if(daysSinceNum>=3)prompts.push('Should I test today?');
+      const fc=latest.chlorine,ph=latest.ph;
+      if(fc!=null&&fc<IDEAL.chlorine.min)prompts.push('How do I raise my chlorine?');
+      if(ph!=null&&ph>IDEAL.ph.max)prompts.push('Why does my pH keep rising?');
+      if(ph!=null&&ph<IDEAL.ph.min)prompts.push('How do I raise my pH?');
+      const alk=latest.alkalinity;
+      if(alk!=null&&alk<IDEAL.alkalinity.min)prompts.push('My alkalinity is low — what should I do?');
+      if(S.history.length>=5)prompts.push('How is my pool doing overall?');
+      if(S.history.length>=3)prompts.push('What patterns do you see?');
+    }
+    if(!prompts.length)prompts.push('What should I know about pool maintenance?','How often should I test?');
+    html+=`<div class="mono" style="font-size:9px;color:var(--mut2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;margin-top:16px">Ask Clarity</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px">${prompts.slice(0,4).map(q=>
+        `<button class="chip dash-prompt" data-q="${esc(q)}">${q}</button>`).join('')}</div>`;
+
+    // Export + Manual buttons
+    html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
+      <button class="btn" id="exportBtn" style="background:var(--panel2);border:1px solid var(--line);font-size:11px;color:var(--aqua);padding:12px 10px">📋 Export Report</button>
+      <button class="btn" id="manualBtn" style="background:var(--panel2);border:1px solid var(--line);font-size:11px;color:var(--aqua);padding:12px 10px">📖 Pool Manual</button>
+    </div>`;
+
   } else {
     html+=`<div class="empty"><div class="e">📊</div>
       <div class="mono" style="letter-spacing:1px;text-transform:uppercase;font-size:12px">No data yet</div>
       <div style="font-size:12px;margin-top:6px">Test your water to see your dashboard. Tap <strong>Chat</strong> to scan a strip or <strong>Chemistry</strong> to enter readings.</div></div>`;
   }
 
+  // Onboarding nudge if profile incomplete
+  const P=S.poolProfile;
+  const profileDone=[P.type,P.surface,P.filter,P.climate,P.sun,P.water,P.usage].filter(Boolean).length;
+  if(profileDone<7){
+    html+=`<div class="formcard" style="padding:13px 16px;margin-top:12px;border:1px solid var(--line2)">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div><div style="font-size:12px;font-weight:500;color:var(--aqua)">Complete your pool profile</div>
+        <div style="font-size:11px;color:var(--mut);margin-top:2px">${profileDone}/7 fields · Better advice with a complete profile</div></div>
+        <button class="chip on" id="nudgeSetup" style="font-size:11px">Set up →</button>
+      </div>
+    </div>`;
+  }
+
   html+=`</div>`;
   b.innerHTML=html;
+
+  // Smart prompt clicks → go to chat and send
+  b.querySelectorAll('.dash-prompt').forEach(btn=>{
+    btn.onclick=()=>{S.tab='chat';render();setTimeout(()=>sendMessage(btn.dataset.q),100);};
+  });
+
+  // Export report
+  if($('exportBtn'))$('exportBtn').onclick=()=>{
+    let report='CLARITY POOL REPORT\n';
+    report+='Generated: '+new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'})+'\n';
+    report+='═══════════════════════\n\n';
+    report+='POOL PROFILE\n';
+    report+='Pool size: '+S.gallons.toLocaleString()+' gallons\n';
+    const P=S.poolProfile;
+    if(P.type)report+='Sanitizer: '+P.type+'\n';
+    if(P.surface)report+='Surface: '+P.surface+'\n';
+    if(P.filter)report+='Filter: '+P.filter+'\n';
+    if(P.climate)report+='Climate: '+P.climate+'\n';
+    if(P.sun)report+='Sun: '+P.sun+'\n';
+    if(P.water)report+='Water source: '+P.water+'\n';
+    if(P.usage)report+='Usage: '+P.usage+'\n';
+    if(P.equipment&&P.equipment.length)report+='Equipment: '+P.equipment.join(', ')+'\n';
+    if(S.poolNotes)report+='Notes: '+S.poolNotes+'\n';
+    report+='\nTEST HISTORY (last 20)\n';
+    S.history.slice(0,20).forEach(e=>{
+      const d=new Date(e.timestamp);
+      const ds=d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+      report+='\n'+ds+'\n';
+      KEYS.forEach(k=>{
+        if(e[k]!=null)report+='  '+IDEAL[k].label+': '+e[k]+' '+IDEAL[k].unit+' ('+statusOf(e[k],k)+')\n';
+      });
+      if(e.action)report+='  Action: '+e.action+(e.actionAmt?' · '+e.actionAmt:'')+'\n';
+      if(e.notes)report+='  Notes: '+e.notes+'\n';
+    });
+    navigator.clipboard.writeText(report).then(()=>{
+      $('exportBtn').textContent='✓ Copied!';
+      setTimeout(()=>{$('exportBtn').textContent='📋 Export Report';},2000);
+    }).catch(()=>{
+      const blob=new Blob([report],{type:'text/plain'});
+      const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+      a.download='clarity-pool-report.txt';a.click();
+    });
+  };
+
+  // Pool manual button → go to chat and ask Claude
+  if($('manualBtn'))$('manualBtn').onclick=()=>{
+    S.tab='chat';render();
+    setTimeout(()=>sendMessage('Based on everything you know about my pool — profile, history, patterns, and current readings — write me a comprehensive Pool Maintenance Manual. Include: my pool specs, ideal ranges for my setup, my typical maintenance schedule, what chemicals I use and how much, seasonal tips for my climate, common issues I run into and how to fix them, and any patterns you\'ve noticed. Make it specific to MY pool, not generic advice.'),100);
+  };
+
+  // Onboarding nudge
+  if($('nudgeSetup'))$('nudgeSetup').onclick=()=>{S.setupOpen=true;renderSetup();};
 }
 
 function renderChat(b){
