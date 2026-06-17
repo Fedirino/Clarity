@@ -231,7 +231,7 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v2.3.0</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v2.4.0</span></div>
   </div>
 </div>
 
@@ -408,7 +408,7 @@ function renderSetup(){
       <textarea id="poolNotesInput" style="width:100%;min-height:70px;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:11px;padding:10px 12px;color:var(--txt);font-size:13px;font-family:inherit;resize:vertical;line-height:1.5" placeholder="Anything else Clarity should know — e.g. 'has a slow leak', 'recently replastered', 'lots of trees nearby'…">${esc(S.poolNotes)}</textarea>
       <div class="hint">These notes are sent to Clarity with every message so it understands your pool's ongoing situation.</div></div>
 
-      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v2.3.0</div>
+      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v2.4.0</div>
     </div>`;
 
   // Gallon chips
@@ -630,6 +630,77 @@ function renderDash(b){
           ${e.notes?`<span style="color:var(--mut2);font-style:italic">· ${e.notes}</span>`:''}
         </div>`;
       });
+    }
+
+    // Computed insights
+    if(S.history.length>=3){
+      const dashInsights=[];
+
+      // FC decay rate
+      const fcP=[];
+      for(let i=0;i<S.history.length-1;i++){
+        const cur=S.history[i],prev=S.history[i+1];
+        if(cur.chlorine!=null&&prev.chlorine!=null&&prev.action!=='Added Chlorine'&&prev.action!=='Shocked'){
+          const days=(prev.timestamp-cur.timestamp)/864e5;
+          if(days>0&&days<14)fcP.push((prev.chlorine-cur.chlorine)/days);
+        }
+      }
+      if(fcP.length>=2){
+        const avg=(fcP.reduce((a,b)=>a+b,0)/fcP.length).toFixed(2);
+        dashInsights.push({icon:'📉',text:`FC drops ~${Math.abs(avg)} ppm/day`});
+      }
+
+      // pH trend
+      const phV=S.history.filter(e=>e.ph!=null).slice(0,10);
+      if(phV.length>=3){
+        const recent=phV.slice(0,3).reduce((a,e)=>a+e.ph,0)/3;
+        const older=phV.slice(-3).reduce((a,e)=>a+e.ph,0)/Math.min(3,phV.slice(-3).length);
+        const drift=recent-older;
+        if(Math.abs(drift)>0.1)dashInsights.push({icon:drift>0?'📈':'📉',text:`pH trending ${drift>0?'up':'down'} (${older.toFixed(1)} → ${recent.toFixed(1)})`});
+        else dashInsights.push({icon:'➡️',text:`pH stable (~${recent.toFixed(1)})`});
+      }
+
+      // Test frequency
+      const gaps=[];
+      for(let i=0;i<Math.min(S.history.length-1,10);i++){
+        gaps.push((S.history[i].timestamp-S.history[i+1].timestamp)/864e5);
+      }
+      if(gaps.length){
+        const avgG=(gaps.reduce((a,b)=>a+b,0)/gaps.length).toFixed(0);
+        dashInsights.push({icon:'🗓️',text:`Testing every ~${avgG} days`});
+      }
+
+      // Recurring issues
+      const ic={};
+      S.history.slice(0,15).forEach(e=>{
+        KEYS.forEach(k=>{
+          const st=statusOf(e[k],k);
+          if(st&&st!=='OK'){ic[IDEAL[k].short+' '+st]=(ic[IDEAL[k].short+' '+st]||0)+1;}
+        });
+      });
+      const rec=Object.entries(ic).filter(([,c])=>c>=3).sort((a,b)=>b[1]-a[1]);
+      if(rec.length)dashInsights.push({icon:'🔁',text:`Recurring: ${rec.map(([k,c])=>k+' ('+c+'x)').join(', ')}`});
+
+      // Next test prediction
+      if(fcP.length>=2){
+        const avgDecay=Math.abs(fcP.reduce((a,b)=>a+b,0)/fcP.length);
+        const currentFc=latest.chlorine;
+        if(currentFc!=null&&avgDecay>0){
+          const daysToMin=((currentFc-IDEAL.chlorine.min)/avgDecay).toFixed(0);
+          if(daysToMin>0&&daysToMin<14)dashInsights.push({icon:'⏰',text:`FC reaches minimum in ~${daysToMin} days — test by then`});
+        }
+      }
+
+      if(dashInsights.length){
+        html+=`<div class="mono" style="font-size:9px;color:var(--mut2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;margin-top:16px">Insights</div>`;
+        html+=`<div class="formcard" style="padding:12px 14px;margin-bottom:8px">`;
+        dashInsights.forEach(ins=>{
+          html+=`<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;font-size:12px">
+            <span>${ins.icon}</span><span style="color:var(--txt)">${ins.text}</span>
+          </div>`;
+        });
+        html+=`</div>`;
+      }
     }
   } else {
     html+=`<div class="empty"><div class="e">📊</div>
@@ -900,6 +971,99 @@ function logReading(read){
 const CHAT_MODEL='claude-opus-4-6'; // Reasoning, patterns, learning
 const STRIP_MODEL='claude-haiku-4-5-20251001'; // Fast image analysis
 
+function buildInsightsContext(){
+  if(S.history.length<3)return'';
+  const h=S.history;
+  const insights=[];
+
+  // 1. FC decay rate (between consecutive readings where no chlorine was added)
+  const fcPairs=[];
+  for(let i=0;i<h.length-1;i++){
+    const cur=h[i],prev=h[i+1];
+    if(cur.chlorine!=null&&prev.chlorine!=null&&prev.action!=='Added Chlorine'&&prev.action!=='Shocked'){
+      const days=(prev.timestamp-cur.timestamp)/864e5;
+      if(days>0&&days<14){
+        const rate=(prev.chlorine-cur.chlorine)/days;
+        fcPairs.push(rate);
+      }
+    }
+  }
+  if(fcPairs.length>=2){
+    const avg=(fcPairs.reduce((a,b)=>a+b,0)/fcPairs.length).toFixed(2);
+    insights.push(`FC decay rate: approximately ${avg} ppm/day (based on ${fcPairs.length} intervals without chlorine addition)`);
+  }
+
+  // 2. pH trend direction
+  const phVals=h.filter(e=>e.ph!=null).slice(0,10);
+  if(phVals.length>=3){
+    const recent=phVals.slice(0,3).reduce((a,e)=>a+e.ph,0)/3;
+    const older=phVals.slice(-3).reduce((a,e)=>a+e.ph,0)/Math.min(3,phVals.slice(-3).length);
+    const drift=recent-older;
+    if(Math.abs(drift)>0.1){
+      insights.push(`pH trend: ${drift>0?'rising':'falling'} (avg ${older.toFixed(1)} → ${recent.toFixed(1)} over last ${phVals.length} tests)`);
+    } else {
+      insights.push(`pH trend: stable around ${recent.toFixed(1)}`);
+    }
+  }
+
+  // 3. Test frequency
+  if(h.length>=3){
+    const gaps=[];
+    for(let i=0;i<Math.min(h.length-1,10);i++){
+      gaps.push((h[i].timestamp-h[i+1].timestamp)/864e5);
+    }
+    const avgGap=(gaps.reduce((a,b)=>a+b,0)/gaps.length).toFixed(1);
+    insights.push(`Average testing frequency: every ${avgGap} days`);
+  }
+
+  // 4. Days since last test
+  const daysSince=((Date.now()-h[0].timestamp)/864e5).toFixed(1);
+  insights.push(`Days since last test: ${daysSince}`);
+
+  // 5. Action effectiveness (before/after for chlorine additions)
+  const chlorineActions=[];
+  for(let i=0;i<h.length-1;i++){
+    if(h[i].action==='Added Chlorine'||h[i].action==='Shocked'){
+      const before=h[i].chlorine;
+      const after=h[i>0?i-1:0].chlorine;
+      if(before!=null&&after!=null&&i>0){
+        chlorineActions.push({action:h[i].action,before,after,amt:h[i].actionAmt||'unknown amount'});
+      }
+    }
+  }
+  if(chlorineActions.length){
+    const summaries=chlorineActions.slice(0,3).map(a=>
+      `${a.action} (${a.amt}): FC ${a.before} → ${a.after}`
+    );
+    insights.push(`Recent chlorine action results: ${summaries.join('; ')}`);
+  }
+
+  // 6. Recurring issues
+  const issueCounts={};
+  h.slice(0,15).forEach(e=>{
+    KEYS.forEach(k=>{
+      const st=statusOf(e[k],k);
+      if(st&&st!=='OK'){
+        const key=IDEAL[k].short+' '+st;
+        issueCounts[key]=(issueCounts[key]||0)+1;
+      }
+    });
+  });
+  const recurring=Object.entries(issueCounts).filter(([,c])=>c>=3).sort((a,b)=>b[1]-a[1]);
+  if(recurring.length){
+    insights.push(`Recurring issues (last 15 tests): ${recurring.map(([k,c])=>k+' ('+c+'x)').join(', ')}`);
+  }
+
+  // 7. Best/worst parameters
+  const latest=h[0];
+  const perfect=KEYS.filter(k=>latest[k]!=null&&statusOf(latest[k],k)==='OK');
+  const problem=KEYS.filter(k=>latest[k]!=null&&statusOf(latest[k],k)!=='OK');
+  if(perfect.length)insights.push(`Currently ideal: ${perfect.map(k=>IDEAL[k].short).join(', ')}`);
+  if(problem.length)insights.push(`Currently out of range: ${problem.map(k=>IDEAL[k].short+' ('+statusOf(latest[k],k)+')').join(', ')}`);
+
+  return'\n\nPOOL INSIGHTS (computed from history — use these to give specific, data-driven advice):\n'+insights.map(i=>'• '+i).join('\n');
+}
+
 function buildProfileContext(){
   const P=S.poolProfile;
   const parts=[];
@@ -985,6 +1149,15 @@ LEARNING & PERSONALIZATION:
 - Ask clarifying questions based on their history: "Last time this happened, you tried X. Want to try that again?"
 - Anticipate issues: Based on your pool knowledge, suggest proactive maintenance
 - Update your mental model after each session — you're getting smarter about their specific pool
+
+PROACTIVE COACHING (use POOL INSIGHTS data when available):
+- PATTERN RECOGNITION: Reference computed decay rates, pH drift, and recurring issues. Say "Your FC drops about 0.5 ppm/day" not "chlorine can decay."
+- ANOMALY DETECTION: If today's reading contradicts established patterns, flag it: "This is unusual for your pool — your FC is normally stable at this level. Did something change?"
+- PREDICTIVE GUIDANCE: Use decay rates + days since last test to predict: "Based on your FC decay rate of 0.5/day, you'll likely need chlorine by Thursday. I'd test Wednesday to confirm."
+- BEFORE/AFTER TRACKING: When action results data is available, evaluate effectiveness: "You added 2 lbs chlorine and FC rose from 1.5 to 3.2 — that dosage is working well for your pool."
+- RECURRING ISSUES: If a parameter is consistently out of range, address the root cause rather than just the symptom: "Your pH has been high in 5 of the last 10 tests. With your water source and climate, this is likely caused by..."
+- TEST FREQUENCY: If they're testing too often or not enough based on their pool's behavior, gently suggest adjustments.
+- SEASONAL AWARENESS: Factor in the current date, their climate profile, and historical patterns. Summer = higher chlorine demand, algae risk. Winter = reduced testing needed.
 
 OTHER POOL PHOTOS (not a strip): identify water clarity/color, algae type, equipment/filter/pump problems, surface/liner damage, or read a chemical label. Give specific, actionable advice based on their pool.
 
@@ -1114,12 +1287,13 @@ async function sendMessage(text){
     const systemPrompt=SYSTEM.replace('{POOL_SIZE}',S.gallons.toLocaleString());
     const historyCtx=buildHistoryContext();
     const profileCtx=buildProfileContext();
+    const insightsCtx=buildInsightsContext();
     const notesCtx=S.poolNotes?`\n\nPOOL NOTES (owner's description of their pool situation — factor this into every answer):\n${S.poolNotes}`:'';
     // Use Haiku for strip/image analysis (fast), Opus for reasoning/learning (chat)
     const hasImage=api.some(m=>Array.isArray(m.content)&&m.content.some(c=>c.type==='image'));
     const model=hasImage?STRIP_MODEL:CHAT_MODEL;
     const reply=await callClaude({model,max_tokens:2000,
-      system:systemPrompt+`\nUser's pool: inground, ~${S.gallons.toLocaleString()} gallons.`+profileCtx+notesCtx+historyCtx,messages:api});
+      system:systemPrompt+`\nUser's pool: inground, ~${S.gallons.toLocaleString()} gallons.`+profileCtx+notesCtx+insightsCtx+historyCtx,messages:api});
     S.messages.push({role:'assistant',content:reply});
   }catch(e){S.messages.push({role:'assistant',content:`⚠ ${e.message}`});}
   S.thinking=false;render();
