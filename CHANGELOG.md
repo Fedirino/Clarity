@@ -4,6 +4,22 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [3.1.2] — 2026-06-19
+
+### Stop Over-Refusing on Lighting — Patch
+
+**Overview**: After the v3.1.1 channel fix, scans were still failing — Clarity kept refusing readings and complaining about lighting on photos a person could read by eye. Root cause: the prompt still carried "ask for a reshoot if the light is poor" instructions left over from before the in-frame-card approach. But the entire reason the card sits in the same photo is that lighting *cancels out* — a warm or dim cast shifts the card and strip together, and Clarity can correct using the card's white border. Those leftover refusal instructions directly contradicted the card's purpose, so Clarity bailed instead of calibrating.
+
+### Fixed
+- **Default-to-reading behavior**: Ordinary indoor light, warm/yellow cast, dimness, an angled shot, or sheen on the lamination are explicitly NO LONGER grounds to refuse. If a human could distinguish the swatches, Clarity calibrates against the card and gives a bracketed read, marking confidence "moderate" when light is poor.
+- **Refusal narrowed to genuinely unreadable photos**: severe blur, so dark/blown-out that reference swatches can't be told apart, or glare sitting directly on the strip pads. A single obscured pad is skipped; the rest are still read.
+- **Honesty rule clarified**: "Honest estimation" now explicitly means a best bracketed read with a confidence level — NOT declining whenever conditions are imperfect. Per-pad "can't read confidently" is reserved for a specific unreadable pad, not the whole photo.
+
+### Version
+- Bumped 3.1.1 → 3.1.2 (footer tag + settings panel).
+
+---
+
 ## [3.1.1] — 2026-06-19
 
 ### Strip-in-Channel Scan Fix — Patch

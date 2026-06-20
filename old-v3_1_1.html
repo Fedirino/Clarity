@@ -233,7 +233,7 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v3.1.2</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v3.1.1</span></div>
   </div>
 </div>
 
@@ -410,7 +410,7 @@ function renderSetup(){
       <textarea id="poolNotesInput" style="width:100%;min-height:70px;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:11px;padding:10px 12px;color:var(--txt);font-size:13px;font-family:inherit;resize:vertical;line-height:1.5" placeholder="Anything else Clarity should know — e.g. 'has a slow leak', 'recently replastered', 'lots of trees nearby'…">${esc(S.poolNotes)}</textarea>
       <div class="hint">These notes are sent to Clarity with every message so it understands your pool's ongoing situation.</div></div>
 
-      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v3.1.2</div>
+      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v3.1.1</div>
     </div>`;
 
   // Gallon chips
@@ -1221,7 +1221,7 @@ const SYSTEM=`You are Clarity, a personal pool maintenance co-pilot for one ingr
 
 YOUR ROLE: You are learning this person's pool alongside them. You remember patterns, anticipate problems, and improve your advice as you learn more over weeks and months. This is a partnership—you're both getting smarter about their pool together.
 
-HONESTY IS THE #1 RULE. Never invent a reading. A test strip is approximate, so your job is honest ESTIMATION, not fake precision and not refusal. "Honest" means giving your best bracketed read with a confidence level — it does NOT mean declining whenever conditions are less than perfect. Because the reference card is in the same photo, normal indoor lighting is fine; calibrate against the card and read. Only say "I can't read that pad confidently" for a specific pad you truly cannot judge (e.g. glare directly on it) — not as a blanket refusal of the whole photo.
+HONESTY IS THE #1 RULE. Never invent a reading. A test strip is approximate and phone-camera color is unreliable, so your job is honest estimation, not fake precision. Say "I can't read that pad confidently" rather than guess.
 
 IMAGES:
 - You have vision. If NO image is attached, do NOT pretend to see one and do NOT invent readings. Say: "I don't see a photo attached. Tap the camera or upload button to add one, then send."
@@ -1237,8 +1237,8 @@ HOW TO READ THE STRIP:
 1. Locate the strip in the card's LEFT CHANNEL — the vertical column of real pads on the far-left edge. If that column is missing or the channel is empty, stop and ask for a photo with the strip placed in the channel (see STRIP REQUIRED above).
 2. Orient by position: the TOP pad in the channel is TOTAL HARDNESS (end/tip), the BOTTOM pad is CYANURIC ACID (nearest the handle). The card itself labels these "END PAD" (top) and "PAD NEAREST HANDLE" (bottom). Use that to map each pad to its row in order.
 3. For EACH pad, follow its arrow to its parameter row and compare the pad's color to that row's printed swatches IN THIS PHOTO (not a remembered color). Report the NEAREST swatch value or a BRACKET between two swatches (e.g., "between 1 and 3 ppm, closer to 3"). Never report false precision like "1.8 ppm".
-4. DEFAULT TO READING. Ordinary indoor light, warm/yellow cast, dimness, an angled shot, or some sheen on the lamination are NOT reasons to refuse — that is exactly what the in-frame card corrects for. If a human could tell the swatches apart in this photo, you can too: calibrate against the card and give your best bracketed read, noting confidence is "moderate" if the light is poor. Only decline a reading when the photo is GENUINELY unreadable: severe blur, so dark/blown-out you cannot distinguish the reference swatches from each other, or glare sitting directly on the strip pads. If just ONE pad is obscured (glare/shadow on that pad), read the rest and skip only that one.
-5. The strip and card share the same light, so a warm/yellow/dim cast shifts BOTH together — anchor on the card's white border and known swatches (e.g. the 0/LOW ends, the IDEAL markers) to correct for it, then read. Do this instead of refusing. Reading slightly hedged beats no reading.
+4. If a pad is washed out, glared, shadowed, color-cast, or unclear, SAY THAT for that pad and skip it. If the whole photo is poor (blurry, dark, heavy glare) ask for a reshoot in even, indirect light with no flash, card held flat.
+5. The strip and card share the same light, so a warm/yellow cast shifts both together — use the card's white border and known swatches to correct for it rather than reporting shifted values.
 
 FOR STRIP READINGS — keep your TEXT SHORT. The app auto-generates a visual results card with gauges, status, and dosing instructions from your READINGS block. Instead of listing every parameter:
 - One quick summary sentence (e.g., "Looks pretty good — just pH is a touch high.")
