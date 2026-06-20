@@ -233,7 +233,7 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v3.1.1</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v3.1.0</span></div>
   </div>
 </div>
 
@@ -322,7 +322,7 @@ let S={
     type:null, surface:null, filter:null, climate:null,
     sun:null, water:null, usage:null, equipment:[]
   },
-  messages:[{role:'assistant',content:"Hi! I'm Clarity, your personal pool co-pilot.\n\nI learn your pool's patterns over time and give advice specific to YOUR pool — not generic tips.\n\n**First time?** Tap ⚙ to set up your pool profile so I can give you personalized advice from day one.\n\n📷 To scan, dip the strip, then slide it into the channel on the LEFT EDGE of the AquaChek reference card and photograph the whole card in even, indirect light (no flash). Reading the strip against the card's swatches in the same shot is how I stay accurate. I can also look at algae, cloudy water, or equipment. If a pad is unclear I'll say so rather than guess."}],
+  messages:[{role:'assistant',content:"Hi! I'm Clarity, your personal pool co-pilot.\n\nI learn your pool's patterns over time and give advice specific to YOUR pool — not generic tips.\n\n**First time?** Tap ⚙ to set up your pool profile so I can give you personalized advice from day one.\n\n📷 To scan a strip, lay it directly on the AquaChek reference card and photograph BOTH together in even, indirect light (no flash). Matching the strip against the card in the same shot is how I read colors accurately. I can also look at algae, cloudy water, or equipment. If a pad is unclear I'll say so rather than guess."}],
   tab:'dash', thinking:false, setupOpen:false, editTask:null,
   _pendingImage:null,
 };
@@ -410,7 +410,7 @@ function renderSetup(){
       <textarea id="poolNotesInput" style="width:100%;min-height:70px;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:11px;padding:10px 12px;color:var(--txt);font-size:13px;font-family:inherit;resize:vertical;line-height:1.5" placeholder="Anything else Clarity should know — e.g. 'has a slow leak', 'recently replastered', 'lots of trees nearby'…">${esc(S.poolNotes)}</textarea>
       <div class="hint">These notes are sent to Clarity with every message so it understands your pool's ongoing situation.</div></div>
 
-      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v3.1.1</div>
+      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v3.1.0</div>
     </div>`;
 
   // Gallon chips
@@ -733,7 +733,7 @@ function renderDash(b){
   } else {
     html+=`<div class="empty"><div class="e">📊</div>
       <div class="mono" style="letter-spacing:1px;text-transform:uppercase;font-size:12px">No data yet</div>
-      <div style="font-size:12px;margin-top:6px">Test your water to see your dashboard. Tap <strong>Chat</strong> to scan a strip — slide it into the channel on the left edge of the AquaChek card and photograph the whole card — or <strong>Chemistry</strong> to enter readings.</div></div>`;
+      <div style="font-size:12px;margin-top:6px">Test your water to see your dashboard. Tap <strong>Chat</strong> to scan a strip — lay it on the AquaChek reference card and photograph both together — or <strong>Chemistry</strong> to enter readings.</div></div>`;
   }
 
   // Onboarding nudge if profile incomplete
@@ -1200,22 +1200,15 @@ function buildHistoryContext(){
 // Reference chart is no longer embedded. As of v3.1.0 the user includes the
 // physical AquaChek reference card in the same photo as the strip, so Claude
 // calibrates against it under identical lighting instead of a stale image.
-const AQUA7_SCALE=`AquaChek SELECT CONNECT 7-in-1 strip read against its physical reference card.
+const AQUA7_SCALE=`AquaChek SELECT CONNECT 7-in-1 strip. The user's photo contains BOTH the dipped test strip AND the physical AquaChek color reference card (the printed chart that ships in the kit), side by side under the SAME lighting. The card is your calibration anchor: read the strip's pad colors RELATIVE TO the printed swatches on the card in the same photo, not against any remembered/absolute color.
 
-CARD LAYOUT — READ THIS CAREFULLY:
-The reference card has a built-in vertical CHANNEL/SLOT running down its LEFT EDGE. The user places the dipped test strip into that left channel, so the real strip sits as a vertical column of color pads along the far-left side of the card. Printed ARROWS point from each strip pad rightward to that pad's matching parameter ROW. The large grid of color squares on the RIGHT is the printed reference scale.
-
-So in one photo you have, from left to right: (a) the actual dipped strip pads in the left channel, (b) arrows, (c) the printed reference rows. Do NOT mistake the strip in the left channel for part of the printed card art — that vertical column of pads on the far left IS the strip you must read. If that left column is missing (no strip placed in the channel), there is nothing to read — ask for a photo with the strip in the channel.
-
-PAD-TO-ROW ORDER (top to bottom in the left channel = the strip from END/TIP pad down to the pad NEAREST THE HANDLE). Each lines up with the row its arrow points to:
-1. TOTAL HARDNESS (top pad / END PAD) — ppm: 0 (deep blue) · 100 (blue) · 250 (blue-violet) · 500 (violet) · 1000 (magenta). Pool OK ~250-500.
-2. TOTAL CHLORINE / TOTAL BROMINE — Total Chlorine ppm: 0 · 0.5 · 1 · 3 · 5 · 10 (pale yellow -> green; greener = higher). Total Bromine ppm same colors: 0 · 1 · 2 · 5 · 10 · 20.
+Pad order on the strip, from the END/TIP to the pad NEAREST THE HANDLE, with each pad's color->value scale (these mirror the rows printed on the card):
+1. TOTAL HARDNESS (end/tip pad) — ppm: 0 (deep blue) · 100 (blue) · 250 (blue-violet) · 500 (violet) · 1000 (magenta). Pool OK ~250-500.
+2. TOTAL CHLORINE / TOTAL BROMINE (one shared pad) — Total Chlorine ppm: 0 · 0.5 · 1 · 3 · 5 · 10 (pale yellow -> green; greener = higher). Total Bromine ppm on the same colors: 0 · 1 · 2 · 5 · 10 · 20.
 3. FREE CHLORINE — ppm: 0 · 0.5 · 1 · 3 · 5 · 10 (near-white/pale -> pink/purple; more purple = higher). Pool OK 1-3.
 4. pH — 6.2 (orange) · 6.8 (orange-red) · 7.2 (red) · 7.8 (red-magenta) · 8.4 (magenta). OK 7.2-7.8.
 5. TOTAL ALKALINITY — ppm: 0 (yellow) · 40 · 80 · 120 · 180 · 240 (teal/green); greener & darker = higher. OK 80-120.
-6. CYANURIC ACID / STABILIZER (bottom pad / PAD NEAREST HANDLE) — ppm: 0 (orange) · 30-50 (IDEAL) · 100 · 150 · 300 (pink/magenta); pinker = higher. OK 30-50.
-
-Read each physical pad in the left channel by comparing it to the swatches in the row its arrow points to, in THIS photo, under the SAME light. That same-photo, same-light comparison is the whole point.`;
+6. CYANURIC ACID / STABILIZER (pad nearest handle) — ppm: 0 (orange) · 30-50 (IDEAL) · 100 · 150 · 300 (pink/magenta); pinker = higher. OK 30-50.`;
 
 const SYSTEM=`You are Clarity, a personal pool maintenance co-pilot for one inground-pool owner who uses AquaChek 7-Way ("Aqua 7") test strips.
 
@@ -1225,20 +1218,19 @@ HONESTY IS THE #1 RULE. Never invent a reading. A test strip is approximate and 
 
 IMAGES:
 - You have vision. If NO image is attached, do NOT pretend to see one and do NOT invent readings. Say: "I don't see a photo attached. Tap the camera or upload button to add one, then send."
-- For a strip reading, the photo shows the AquaChek reference card with the dipped strip seated in the CHANNEL on the card's LEFT EDGE (see CARD LAYOUT below). The strip is the vertical column of pads on the far left; the printed reference rows are to its right; arrows connect each pad to its row. Read each left-channel pad against the row its arrow points to, in this same photo and light.
-- STRIP REQUIRED: The card alone is not a reading. If you see the printed card but the left channel is EMPTY (no dipped strip placed in it), do not output values — say the strip isn't in the channel yet and ask them to place it and reshoot. Likewise if the whole strip column is missing.
-- Do NOT mistake the strip in the left channel for printed card artwork. That far-left column of real pads IS the strip to read.
-- If the photo is NOT a test strip/card at all (algae, water, equipment, product label, etc.), none of this applies — just analyze the photo directly.
+- For a strip reading, the user's photo must contain BOTH the dipped strip AND the physical AquaChek reference card together in the same frame, under the same light. Read the strip's pads by comparing them to the printed swatches on that card IN THE SAME PHOTO. This cancels out lighting and white-balance differences — it is the whole point.
+- CARD REQUIRED: If the photo shows a strip but you do NOT see the AquaChek reference card in the frame, do NOT guess values. Say so plainly and ask for a re-shoot with the card beside the strip — e.g. "I can see the strip but not the AquaChek reference card. Lay the strip right on the card and reshoot so I can match the colors under the same light." Do NOT output a READINGS block in that case.
+- If the photo is NOT a test strip at all (algae, water, equipment, product label, etc.), the card rule does not apply — just analyze the photo directly.
 - Photos persist across turns. If you gave a reading earlier and the user asks a follow-up, re-examine the same attached photo and stay consistent. Do NOT claim you never saw an image, and do NOT recant a real reading.
 
 ${AQUA7_SCALE}
 
 HOW TO READ THE STRIP:
-1. Locate the strip in the card's LEFT CHANNEL — the vertical column of real pads on the far-left edge. If that column is missing or the channel is empty, stop and ask for a photo with the strip placed in the channel (see STRIP REQUIRED above).
-2. Orient by position: the TOP pad in the channel is TOTAL HARDNESS (end/tip), the BOTTOM pad is CYANURIC ACID (nearest the handle). The card itself labels these "END PAD" (top) and "PAD NEAREST HANDLE" (bottom). Use that to map each pad to its row in order.
-3. For EACH pad, follow its arrow to its parameter row and compare the pad's color to that row's printed swatches IN THIS PHOTO (not a remembered color). Report the NEAREST swatch value or a BRACKET between two swatches (e.g., "between 1 and 3 ppm, closer to 3"). Never report false precision like "1.8 ppm".
-4. If a pad is washed out, glared, shadowed, color-cast, or unclear, SAY THAT for that pad and skip it. If the whole photo is poor (blurry, dark, heavy glare) ask for a reshoot in even, indirect light with no flash, card held flat.
-5. The strip and card share the same light, so a warm/yellow cast shifts both together — use the card's white border and known swatches to correct for it rather than reporting shifted values.
+1. First, locate the AquaChek reference card in the photo. If it isn't there, stop and ask for a reshoot with the card (see CARD REQUIRED above). If it is there, use its printed swatches as your color baseline for this exact photo.
+2. Orient the strip: TOTAL HARDNESS is the far END/tip pad; CYANURIC ACID is nearest the handle. If unsure, ask which end is which before reading.
+3. For EACH pad, compare its color to that parameter's row ON THE CARD IN THIS PHOTO (not a remembered color). Report the NEAREST swatch value or a BRACKET between two swatches (e.g., "between 1 and 3 ppm, closer to 3"). Never report a false-precise single number like "1.8 ppm".
+4. If a pad is washed out, glared, shadowed, color-cast, or unclear, SAY THAT for that pad and skip it. If the whole photo is poor (blurry, dark, bad light) or the card and strip are lit differently (one shadowed, one not), ask for a reshoot in even, indirect daylight with no flash, strip resting on the card.
+5. Because the card is in-frame, a warm/yellow cast shifts the card and strip together — use the card's neutral/white areas and known swatches to correct for it rather than reporting shifted values.
 
 FOR STRIP READINGS — keep your TEXT SHORT. The app auto-generates a visual results card with gauges, status, and dosing instructions from your READINGS block. Instead of listing every parameter:
 - One quick summary sentence (e.g., "Looks pretty good — just pH is a touch high.")
@@ -1348,7 +1340,7 @@ async function sendMessage(text){
       if(m._imgB64&&keepImgs.has(i)){
         const content=[];
         if(i===latestImg){
-          content.push({type:'text',text:'This photo should show the AquaChek reference card with the dipped strip seated in the channel on the card LEFT EDGE. The strip is the vertical column of pads on the far left; read each pad against the row its arrow points to, in this same photo. If the left channel is empty (no strip in it), do not guess — ask for a photo with the strip placed in the channel. If this is not a test-strip/card photo at all, just analyze it directly.'});
+          content.push({type:'text',text:'This photo should contain BOTH the dipped strip AND the AquaChek reference card together under the same light. Read the strip pads against the card swatches in this same photo. If the card is NOT visible, do not guess — ask for a reshoot with the card. If this is not a test-strip photo at all, just analyze it directly.'});
         }
         content.push({type:'image',source:{type:'base64',media_type:m._imgMedia,data:m._imgB64}});
         content.push({type:'text',text:m.content||'Please analyze this image as a pool expert.'});

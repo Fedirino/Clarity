@@ -4,6 +4,27 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [3.1.1] — 2026-06-19
+
+### Strip-in-Channel Scan Fix — Patch
+
+**Overview**: First real-world test of v3.1.0 revealed the scan failing: the AquaChek SELECT CONNECT card has a built-in **strip channel along its left edge** — you seat the dipped strip in that slot and printed arrows point from each pad to its matching row. v3.1.0's prompt described the strip and card as two separate objects placed side by side, so Clarity read the strip-in-channel as part of the printed card and never identified it as the strip to read. This patch teaches Clarity the card's actual geometry.
+
+### Fixed
+- **Scan prompt now models the card's left-edge channel**: Clarity looks for the strip as the vertical column of real pads in the channel on the card's left side, follows each pad's arrow to its parameter row, and reads it against that row's swatches in the same photo.
+- **Pad orientation tied to card labels**: top pad = Total Hardness ("END PAD"), bottom pad = Cyanuric Acid ("PAD NEAREST HANDLE"), matching the card's own printed labels, so pad→row mapping is unambiguous.
+- **Explicit anti-confusion instruction**: Clarity is told not to mistake the strip in the channel for printed card artwork.
+
+### Changed
+- **Guard flipped from "card required" to "strip required"**: since the card holds the strip, the failure mode is now an *empty channel* (card present, no strip). Clarity asks for a photo with the strip seated in the channel instead of guessing, and still suppresses the READINGS block in that case.
+- **Welcome message and empty-state copy** updated to instruct sliding the strip into the channel on the card's left edge and photographing the whole card.
+- **Per-turn image instruction** updated to match.
+
+### Version
+- Bumped 3.1.0 → 3.1.1 (footer tag + settings panel).
+
+---
+
 ## [3.1.0] — 2026-06-19
 
 ### Reference-Card Calibration for Strip Scanning — Minor Release
