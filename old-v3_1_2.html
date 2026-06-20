@@ -233,7 +233,7 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v3.1.3</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v3.1.2</span></div>
   </div>
 </div>
 
@@ -410,7 +410,7 @@ function renderSetup(){
       <textarea id="poolNotesInput" style="width:100%;min-height:70px;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:11px;padding:10px 12px;color:var(--txt);font-size:13px;font-family:inherit;resize:vertical;line-height:1.5" placeholder="Anything else Clarity should know — e.g. 'has a slow leak', 'recently replastered', 'lots of trees nearby'…">${esc(S.poolNotes)}</textarea>
       <div class="hint">These notes are sent to Clarity with every message so it understands your pool's ongoing situation.</div></div>
 
-      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v3.1.3</div>
+      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v3.1.2</div>
     </div>`;
 
   // Gallon chips
@@ -1226,8 +1226,7 @@ HONESTY IS THE #1 RULE. Never invent a reading. A test strip is approximate, so 
 IMAGES:
 - You have vision. If NO image is attached, do NOT pretend to see one and do NOT invent readings. Say: "I don't see a photo attached. Tap the camera or upload button to add one, then send."
 - For a strip reading, the photo shows the AquaChek reference card with the dipped strip seated in the CHANNEL on the card's LEFT EDGE (see CARD LAYOUT below). The strip is the vertical column of pads on the far left; the printed reference rows are to its right; arrows connect each pad to its row. Read each left-channel pad against the row its arrow points to, in this same photo and light.
-- READ ON THE FIRST PASS. When a strip/card photo is attached, assume the strip IS in the channel and read it immediately. Do NOT open with a clarifying question ("is the strip in the channel?", "can you confirm...?") or ask for a new photo before attempting — the user framed the shot to be read. Give the bracketed values, then note any low-confidence pads.
-- STRIP REQUIRED (narrow): Only skip the reading if the left channel is PLAINLY, VISIBLY empty — you can see the bare slot with no pads in it. Being merely unsure whether you see the strip is NOT grounds to refuse; look again and read. If you can make out a column of pads at all, read them.
+- STRIP REQUIRED: The card alone is not a reading. If you see the printed card but the left channel is EMPTY (no dipped strip placed in it), do not output values — say the strip isn't in the channel yet and ask them to place it and reshoot. Likewise if the whole strip column is missing.
 - Do NOT mistake the strip in the left channel for printed card artwork. That far-left column of real pads IS the strip to read.
 - If the photo is NOT a test strip/card at all (algae, water, equipment, product label, etc.), none of this applies — just analyze the photo directly.
 - Photos persist across turns. If you gave a reading earlier and the user asks a follow-up, re-examine the same attached photo and stay consistent. Do NOT claim you never saw an image, and do NOT recant a real reading.
@@ -1349,7 +1348,7 @@ async function sendMessage(text){
       if(m._imgB64&&keepImgs.has(i)){
         const content=[];
         if(i===latestImg){
-          content.push({type:'text',text:'This is a strip reading. The user has dipped a strip and seated it in the channel on the LEFT EDGE of the AquaChek card — assume it is there and FIND IT: it is the vertical column of real color pads running down the far-left side, with arrows pointing right to each parameter row. Read each pad against the row its arrow points to, in this same photo, and give your best bracketed values now. Do NOT ask the user to confirm the strip is present and do NOT ask for a new photo first — just read it. The card is in the frame, so normal indoor/warm/dim light is fine; calibrate against the card swatches. Only decline if the channel is plainly, visibly EMPTY (you can see the bare empty slot) or the image is truly unreadable (severe blur). If this is clearly not a strip/card photo at all (algae, equipment, water), analyze it directly instead.'});
+          content.push({type:'text',text:'This photo should show the AquaChek reference card with the dipped strip seated in the channel on the card LEFT EDGE. The strip is the vertical column of pads on the far left; read each pad against the row its arrow points to, in this same photo. If the left channel is empty (no strip in it), do not guess — ask for a photo with the strip placed in the channel. If this is not a test-strip/card photo at all, just analyze it directly.'});
         }
         content.push({type:'image',source:{type:'base64',media_type:m._imgMedia,data:m._imgB64}});
         content.push({type:'text',text:m.content||'Please analyze this image as a pool expert.'});

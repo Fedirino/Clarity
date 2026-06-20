@@ -4,6 +4,25 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [3.1.3] — 2026-06-19
+
+### Read on First Pass — Patch
+
+**Overview**: Scans were still stalling, but with a revealing symptom: Clarity refused on the first attempt, then read the strip correctly the moment the user pushed back. That proves the model CAN read the photo — the problem was purely first-pass behavior. It treated "I'm not fully sure I see the strip" as a reason to ask a clarifying question or request a new photo, instead of just reading. The remaining guards ("if the channel is empty, refuse") gave it too easy an out when it was merely uncertain rather than actually looking at an empty slot.
+
+### Fixed
+- **First-pass reading is now mandatory**: When a strip/card photo is attached, Clarity assumes the strip is in the channel, finds it, and returns bracketed values immediately. It is explicitly told NOT to open with a clarifying question or ask for a new photo before attempting.
+- **Per-turn image instruction rewritten** to bias hard toward reading: "assume it is there and FIND IT," calibrate against the card, give values now.
+- **"Strip required" guard narrowed**: only skips a reading when the channel is plainly, visibly empty (bare slot, no pads). Mere uncertainty about seeing the strip is no longer grounds to refuse — look again and read.
+
+### Rationale
+- The model demonstrably reads the same photo correctly once asked, so the fix targets default behavior, not vision capability. Net effect: the cooperative second-attempt behavior is now the first-attempt behavior.
+
+### Version
+- Bumped 3.1.2 → 3.1.3 (footer tag + settings panel).
+
+---
+
 ## [3.1.2] — 2026-06-19
 
 ### Stop Over-Refusing on Lighting — Patch
