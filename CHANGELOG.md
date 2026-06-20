@@ -4,6 +4,28 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [3.1.4] — 2026-06-20
+
+### Pale Pads Read as "Empty Channel" — Patch
+
+**Overview**: A captured transcript revealed the real failure behind "it's still doing it." Clarity was opening with "the left channel is empty — there's no strip in the slot," then reading the strip correctly only after the user insisted it was there. Root cause: this strip's pads are low-saturation — free chlorine and low total chlorine read near-white, low CYA is pale — and against the card's WHITE channel on a WHITE body they blend in. The model scanned the left edge, saw white-on-white, and concluded the slot was bare. The prior "skip only if plainly, visibly empty" guard then licensed the false refusal.
+
+The same transcript exposed a second, more serious issue: on recovery, Clarity flipped from "channel is empty" straight to six precise readings plus dosing, with no confidence flags — behavior indistinguishable from deferring to the user and generating plausible numbers. That violates the core "Clarity can never lie" principle.
+
+### Fixed
+- **Pale pads are no longer mistaken for an empty channel**: The prompt now states explicitly that faint/near-white pads (low free/total chlorine, low CYA) blend with the white channel and are NOT an empty slot. Clarity is told to assume a strip is present, treat "empty" as a rare exception, and look closely for subtle color blocks before ever concluding the channel is bare.
+- **"Strip required" guard tightened further**: refusal for an empty channel now requires unmistakably bare plastic with zero pads of any shade.
+- **Per-turn image instruction and HOW TO READ step 1** updated with the same pale-pad caveat.
+
+### Added — Anti-Flip-Flop Honesty Guard
+- New rule: if Clarity cannot resolve the strip on the first look, it must NOT then produce confident precise numbers just because the user says the strip is there. It re-examines honestly and, if pads are genuinely faint, reports bracketed low-confidence values — never invented certainty. Capitulating to "it's there" with tidy numbers it could not previously see is explicitly named as a form of lying.
+- Recovered reads must still carry per-pad confidence levels; pale/low-contrast pads are marked low confidence rather than reported as precise.
+
+### Version
+- Bumped 3.1.3 → 3.1.4 (footer tag + settings panel).
+
+---
+
 ## [3.1.3] — 2026-06-19
 
 ### Read on First Pass — Patch
