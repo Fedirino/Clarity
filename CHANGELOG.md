@@ -4,6 +4,33 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [3.1.0] — 2026-06-19
+
+### Reference-Card Calibration for Strip Scanning — Minor Release
+
+**Overview**: Reworks how Clarity reads test strips. Previously it injected a static, embedded color chart image and asked Claude to compare the strip against it — but that reference lived under different lighting than the user's photo, so color matching was unreliable. Now the user places the **physical AquaChek SELECT CONNECT reference card** in the same photo as the dipped strip. Claude calibrates against the card's printed swatches under identical lighting, then reads the strip relative to them. This directly targets the lighting/white-balance variability that was the real accuracy bottleneck (not the model).
+
+### Changed
+- **Scan method is now card-in-frame**: The strip and the AquaChek reference card must appear together in one photo, same light. Claude reads pad colors relative to the card's swatches in that exact image.
+- **System prompt rewritten** (IMAGES + HOW TO READ sections): Claude now locates the card first, uses it as the color baseline, and corrects for any color cast using the card's neutral areas instead of reporting shifted values.
+- **Scale block (`AQUA7_SCALE`) updated** to describe the card as the calibration anchor while preserving the per-pad color→value scales.
+- **Onboarding/empty-state and welcome copy** updated to instruct laying the strip on the card and photographing both together in even, indirect light (no flash).
+
+### Removed
+- **Embedded reference chart image** (`REF_CHART_B64` / `REF_CHART_MEDIA`) and its injection into the API payload. The physical card replaces it, so the stale embedded image is gone — removing a source of mismatched-lighting comparisons and trimming payload size.
+
+### Added
+- **Card-required guard**: If a strip photo arrives without the reference card visible, Clarity does not guess. It explains the card is missing, asks for a re-shoot with the card beside the strip, and suppresses the hidden READINGS block so no fabricated values are recorded. (Non-strip photos — algae, water, equipment — are unaffected.)
+
+### Notes
+- Physical AquaChek SELECT CONNECT strips and card have arrived; this release ships the code ready for first real-world testing at home.
+- No dosing logic changed in this release. Dosing-accuracy review and the embedded pool-knowledge base remain open follow-ups.
+
+### Version
+- Bumped 3.0.0 → 3.1.0 (footer tag + settings panel).
+
+---
+
 ## [3.0.0] — 2026-06-11
 
 ### Polish & Delight (Phase 5) — Major Release
