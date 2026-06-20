@@ -4,6 +4,31 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [3.1.5] — 2026-06-20
+
+### Always-Read + Confidence Percentage — Minor Release
+
+**Overview**: After four patches chasing the "it won't scan" problem, the root fix is architectural rather than another anti-refusal nudge: Clarity no longer decides whether to read a strip. It ALWAYS reads every pad and attaches an honest confidence percentage (0–100%) to each. Uncertainty is now expressed as a number, not a refusal. This is strictly more truthful than the old binary read/decline behavior — a 40% reading openly tells the user "retest for certainty" while still giving them something to act on — and it removes the failure modes (false "empty channel," lighting bailouts, flip-flops) that were really just the model picking refusal when unsure.
+
+### Added
+- **Per-pad confidence percentages**: Every reading on the results card now shows a confidence % (green ≥70, amber 45–69, grey <45), driven by a new `confidence` object in the READINGS data block.
+- **Low-confidence banner**: When any pad drops below 45%, the results card shows a one-line prompt to retest in bright, even daylight with the card flat — guidance, not a refusal.
+
+### Changed
+- **Honesty rule reframed** from "never invent / may decline" to "honesty via confidence, not refusal": always give a best estimate per pad and calibrate the percentage to what's genuinely visible. Inventing high-confidence precision, or raising confidence because the user insists, is explicitly forbidden.
+- **READINGS block** extended to carry a `confidence` map alongside the six values; it is now required for any strip/card photo.
+- **Per-turn image instruction** simplified to "read every pad, give a confidence %, never refuse for quality." The only no-read cases left: not a strip photo, or an image so blurred/dark no guess is possible.
+- **Results-card renderer and parser** updated to split out and display confidence; confidence is shown per-read but not persisted to history (history keeps the six clean values).
+- **Short-text guidance** now asks Clarity to flag a low-confidence read in one honest line and suggest a retest, while still delivering the numbers.
+
+### Rationale
+- A clean outdoor daylight photo confirmed the strip is readable; the remaining problem was the model defaulting to refusal under any uncertainty. Converting uncertainty into a visible percentage resolves the UX complaint and strengthens — rather than compromises — the "Clarity can never lie" principle.
+
+### Version
+- Bumped 3.1.4 → 3.1.5 (footer tag + settings panel).
+
+---
+
 ## [3.1.4] — 2026-06-20
 
 ### Pale Pads Read as "Empty Channel" — Patch

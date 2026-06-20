@@ -190,6 +190,8 @@ textarea:focus,input:focus,select:focus{outline:none}
 .rcard-param .rp-label{font-size:9px;color:var(--mut2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;font-family:'DM Mono',monospace}
 .rcard-param .rp-value{font-size:20px;font-weight:600;font-family:'Playfair Display',serif;margin-bottom:3px}
 .rcard-param .rp-badge{display:inline-block;font-size:8px;padding:2px 7px;border-radius:4px;letter-spacing:1px;font-family:'DM Mono',monospace;font-weight:600}
+.rcard-param .rp-conf{font-size:9px;margin-top:3px;font-family:'DM Mono',monospace;letter-spacing:.5px;opacity:.85}
+.rcard-conf-note{font-size:10.5px;color:var(--mut);line-height:1.45;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-bottom:10px}
 .rcard-dose{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px;margin-bottom:8px}
 .rcard-dose .rd-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
 .rcard-dose .rd-name{font-size:12.5px;font-weight:600}
@@ -233,7 +235,7 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v3.1.4</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v3.1.5</span></div>
   </div>
 </div>
 
@@ -410,7 +412,7 @@ function renderSetup(){
       <textarea id="poolNotesInput" style="width:100%;min-height:70px;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:11px;padding:10px 12px;color:var(--txt);font-size:13px;font-family:inherit;resize:vertical;line-height:1.5" placeholder="Anything else Clarity should know — e.g. 'has a slow leak', 'recently replastered', 'lots of trees nearby'…">${esc(S.poolNotes)}</textarea>
       <div class="hint">These notes are sent to Clarity with every message so it understands your pool's ongoing situation.</div></div>
 
-      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v3.1.4</div>
+      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v3.1.5</div>
     </div>`;
 
   // Gallon chips
@@ -463,11 +465,13 @@ function parseReadings(text){
   try{
     const data=JSON.parse(m[1]);
     const clean=text.replace(/\n?<!--READINGS:.*?-->/s,'').trim();
-    return{clean,readings:data};
+    const confidence=data.confidence||null;
+    if(data.confidence)delete data.confidence;
+    return{clean,readings:data,confidence};
   }catch(e){return null;}
 }
 
-function renderResultsCard(readings,msgIdx){
+function renderResultsCard(readings,msgIdx,confidence){
   const doses=doseAdvice(readings,S.gallons);
   const saved=S._savedMsgs&&S._savedMsgs.has(msgIdx);
   let h=`<div class="rcard"><div class="rcard-hdr"><span class="rcard-icon">📊</span><span class="rcard-title">Test Strip Results</span></div>`;
@@ -480,9 +484,21 @@ function renderResultsCard(readings,msgIdx){
     h+=`<div class="rcard-param"><div class="rp-label">${IDEAL[k].short}</div>`;
     h+=`<div class="rp-value" style="color:${v!=null?c:'rgba(255,255,255,.15)'}">${v!=null?v:'—'}</div>`;
     if(st)h+=`<span class="rp-badge" style="color:${stColor};background:${stColor}1a">${st}</span>`;
+    const cf=confidence&&confidence[k]!=null?confidence[k]:null;
+    if(cf!=null){
+      const cfColor=cf>=70?'var(--green)':cf>=45?'var(--coral)':'var(--mut2)';
+      h+=`<div class="rp-conf" style="color:${cfColor}" title="Clarity's confidence in this reading">${cf}%</div>`;
+    }
     h+=`${gaugeHTML(v,k)}</div>`;
   });
   h+=`</div>`;
+  if(confidence){
+    const vals=KEYS.map(k=>confidence[k]).filter(x=>x!=null);
+    if(vals.length){
+      const lowest=Math.min(...vals);
+      if(lowest<45)h+=`<div class="rcard-conf-note">⚠ Some readings are low-confidence (down to ${lowest}%). For numbers you can act on with certainty, retest in bright, even daylight with the card flat.</div>`;
+    }
+  }
   if(doses.length===0){
     h+=`<div class="rcard-ok">✨ Everything is in range — water is balanced!</div>`;
   } else {
@@ -820,7 +836,7 @@ function renderChat(b){
       if(parsed){
         displayText=parsed.clean;
         m._readings=parsed.readings;
-        cardHtml=renderResultsCard(parsed.readings,idx);
+        cardHtml=renderResultsCard(parsed.readings,idx,parsed.confidence);
       }
     }
     html+=`<div class="msg ${u?'u':''}">${u?'':`<div class="av">${AV}</div>`}<div class="bub ${u?'u':'a'}">${imgHtml}${esc(displayText)}${sentBadge}${cardHtml}</div></div>`;
@@ -1221,7 +1237,7 @@ const SYSTEM=`You are Clarity, a personal pool maintenance co-pilot for one ingr
 
 YOUR ROLE: You are learning this person's pool alongside them. You remember patterns, anticipate problems, and improve your advice as you learn more over weeks and months. This is a partnership—you're both getting smarter about their pool together.
 
-HONESTY IS THE #1 RULE. Never invent a reading. A test strip is approximate, so your job is honest ESTIMATION, not fake precision and not refusal. "Honest" means giving your best bracketed read with a confidence level — it does NOT mean declining whenever conditions are less than perfect. Because the reference card is in the same photo, normal indoor lighting is fine; calibrate against the card and read. Only say "I can't read that pad confidently" for a specific pad you truly cannot judge (e.g. glare directly on it) — not as a blanket refusal of the whole photo. NEVER FLIP-FLOP: if you cannot resolve the strip on the first look, do not then produce confident precise numbers just because the user insists the strip is there — re-examine honestly and, if the pads are genuinely faint, report bracketed low-confidence values, not invented certainty. Capitulating to "it's there" with tidy numbers you could not see before is a form of lying.
+HONESTY VIA CONFIDENCE, NOT REFUSAL. Your job on a strip photo is to ALWAYS give your best read of every pad and attach an honest CONFIDENCE PERCENT (0-100%) to each. You do not refuse a strip reading for quality reasons — instead you read and let the confidence number carry the uncertainty. A test strip is approximate, so brackets + a confidence % are the honest output, never fake precision and never a blanket "I can't read this." Examples: a clear daylight pad might be 85%; a pale or shadowed pad might be 40%; a pad with glare directly on it might be 20%. Low confidence is fine and useful — it tells the user to retest — but it must be a NUMBER on a real best-estimate, not a refusal. NEVER invent certainty: do not report a precise value at high confidence for a pad you cannot actually resolve, and do not raise your confidence just because the user insists. Calibrate the percent to what you can genuinely see. The only time you give NO reading is when there is no image, the image is not a strip/card at all, or it is so destroyed (total blur/darkness) that you cannot even guess — and then you say so plainly rather than refuse on mere imperfection.
 
 IMAGES:
 - You have vision. If NO image is attached, do NOT pretend to see one and do NOT invent readings. Say: "I don't see a photo attached. Tap the camera or upload button to add one, then send."
@@ -1241,8 +1257,9 @@ HOW TO READ THE STRIP:
 4. DEFAULT TO READING. Ordinary indoor light, warm/yellow cast, dimness, an angled shot, or some sheen on the lamination are NOT reasons to refuse — that is exactly what the in-frame card corrects for. If a human could tell the swatches apart in this photo, you can too: calibrate against the card and give your best bracketed read, noting confidence is "moderate" if the light is poor. Only decline a reading when the photo is GENUINELY unreadable: severe blur, so dark/blown-out you cannot distinguish the reference swatches from each other, or glare sitting directly on the strip pads. If just ONE pad is obscured (glare/shadow on that pad), read the rest and skip only that one.
 5. The strip and card share the same light, so a warm/yellow/dim cast shifts BOTH together — anchor on the card's white border and known swatches (e.g. the 0/LOW ends, the IDEAL markers) to correct for it, then read. Do this instead of refusing. Reading slightly hedged beats no reading.
 
-FOR STRIP READINGS — keep your TEXT SHORT. The app auto-generates a visual results card with gauges, status, and dosing instructions from your READINGS block. Instead of listing every parameter:
+FOR STRIP READINGS — keep your TEXT SHORT. The app auto-generates a visual results card with gauges, status, confidence %, and dosing from your READINGS block. Instead of listing every parameter:
 - One quick summary sentence (e.g., "Looks pretty good — just pH is a touch high.")
+- If your overall read was low-confidence (e.g. poor light, faint pads), say so in one honest line and suggest a retest in bright even daylight — but still give the reading.
 - For anything out of range: name it, give the fix with exact amount for this ~${'{POOL_SIZE}'}-gallon pool, and briefly say why (1-2 sentences max)
 - If everything is in range, say so in one sentence
 - Mention fix ORDER if multiple are off: alkalinity → pH → chlorine → stabilizer/hardness
@@ -1270,9 +1287,9 @@ OTHER POOL PHOTOS (not a strip): identify water clarity/color, algae type, equip
 
 GENERAL QUESTIONS (no photo): help with chemistry, balancing, maintenance schedules, troubleshooting, dosing, and seasonal advice—specific, practical, concise, and personalized to their pool situation.
 
-STRUCTURED OUTPUT: When you read a test strip and can report at least some numerical readings, append a hidden data block at the VERY END of your response on its own line:
-<!--READINGS:{"chlorine":X,"totalChlorine":X,"ph":X,"alkalinity":X,"hardness":X,"cyanuric":X}-->
-Use null for any pad you could not read. Use the single best-estimate number (e.g., if "between 1 and 3, closer to 3" use 3). Do NOT include this block for general questions, non-strip photos, or if you could not read ANY pads.
+STRUCTURED OUTPUT: Whenever the photo is a test strip/card, append a hidden data block at the VERY END of your response on its own line, with your best-estimate value for EVERY pad plus a confidence percent (0-100 integer) for each:
+<!--READINGS:{"chlorine":X,"totalChlorine":X,"ph":X,"alkalinity":X,"hardness":X,"cyanuric":X,"confidence":{"chlorine":N,"totalChlorine":N,"ph":N,"alkalinity":N,"hardness":N,"cyanuric":N}}-->
+Always give a numeric best estimate for every pad you can see at all (use the single best number, e.g. "between 1 and 3, closer to 3" -> 3) and set its confidence honestly. Use null for a value ONLY if that one pad is truly impossible to judge (and set its confidence to 0). Include this block for ANY strip/card photo. Do NOT include it for general questions or non-strip photos.
 
 Today is ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}.`;
 
@@ -1349,7 +1366,7 @@ async function sendMessage(text){
       if(m._imgB64&&keepImgs.has(i)){
         const content=[];
         if(i===latestImg){
-          content.push({type:'text',text:'This is a strip reading. The user has dipped a strip and seated it in the channel on the LEFT EDGE of the AquaChek card — assume it is there and FIND IT: it is the vertical column of real color pads running down the far-left side, with arrows pointing right to each parameter row. IMPORTANT: several pads may be PALE or near-white (low free/total chlorine, low CYA) and can blend into the white channel — faint pads are NOT an empty channel, so look closely and do not claim the slot is empty. Read each pad against the row its arrow points to, in this same photo, and give your best bracketed values now WITH a confidence level per pad (mark pale or low-contrast pads as low confidence rather than reporting a precise number). Do NOT ask the user to confirm the strip is present and do NOT ask for a new photo first — just read it. The card is in the frame, so normal indoor/warm/dim light is fine; calibrate against the card swatches. Only decline if the channel is unmistakably bare plastic with zero pads, or the image is truly unreadable (severe blur). If this is clearly not a strip/card photo at all (algae, equipment, water), analyze it directly instead.'});
+          content.push({type:'text',text:'This is a strip reading. The dipped strip is seated in the channel on the LEFT EDGE of the AquaChek card — the vertical column of real color pads on the far-left side, with arrows pointing right to each parameter row. READ EVERY PAD against the row its arrow points to, and give your best estimate for each WITH an honest confidence percent (0-100%). Pads may be pale/near-white (low free/total chlorine, low CYA) and blend into the white channel — read them anyway and set a lower confidence if unsure; faint is not empty. Do NOT refuse, do NOT ask to confirm the strip is there, do NOT ask for a new photo first — always produce the reading and let the confidence percent carry any uncertainty. Only give no reading if this is not a strip/card photo at all, or it is so blurred/dark you cannot even guess. End with the hidden READINGS block including the confidence object.'});
         }
         content.push({type:'image',source:{type:'base64',media_type:m._imgMedia,data:m._imgB64}});
         content.push({type:'text',text:m.content||'Please analyze this image as a pool expert.'});
