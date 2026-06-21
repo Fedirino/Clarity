@@ -4,6 +4,43 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [3.2.0] — 2026-06-20
+
+### Move to Firebase + Cloud Sync & Sign-In — Minor Release
+
+**Overview**: Clarity moves off Netlify and onto Firebase, and gains a real backend identity for the first time. Hosting is now Firebase Hosting, the Anthropic proxy is now a 2nd-gen Cloud Function, and your pool data lives in Firestore (synced across devices) instead of only in one browser's localStorage. Access is locked to your Google account: you sign in once, and both your data and the AI proxy are protected — nobody who finds the URL can read your pool history or burn your Anthropic credits. localStorage is kept as a fast local cache, so the app still works instantly and survives brief network blips.
+
+This release is infrastructure groundwork for Phase 1 (the Pool Model, v3.5): with Firestore in place, the Pool Model will persist to the cloud from day one rather than being trapped on a single device.
+
+### Added
+- **Firebase Hosting** serves the app (replaces Netlify hosting).
+- **2nd-gen Cloud Function** (`functions/index.js`) proxies Anthropic, replacing the Netlify function. Longer timeout (120s function / 60s through Hosting) vs Netlify's 10–25s cap — more headroom for Opus vision scans.
+- **Google sign-in gate**: a sign-in overlay covers the app until you authenticate; "Sign in with Google" button, plus a "Sign out" control in Settings.
+- **Firestore cloud sync**: pool gallons, history, tasks, notes, and profile mirror to `clarity/{uid}` in Firestore and hydrate on sign-in — your pool follows you across phone and laptop.
+- **Token-verified proxy**: the function verifies the caller's Firebase ID token (and, when `OWNER_UID` is set, that it's *you*) before forwarding to Anthropic.
+- **Firestore security rules** (`firestore.rules`): each user can read/write only their own document; everything else is denied.
+- **Project config**: `firebase.json` (with the `/api/claude` rewrite), `.firebaserc`, `firestore.indexes.json`, `.gitignore`.
+
+### Changed
+- **API endpoint**: the app now calls `/api/claude` (a Hosting rewrite to the function) with an `Authorization: Bearer <id-token>` header, instead of `/.netlify/functions/claude`.
+- **`persist()`** now writes to both localStorage (immediate) and Firestore (debounced 800ms) via new `persistLocal()` / `cloudPush()` / `cloudHydrate()` helpers.
+- **Version** bumped 3.1.6 → 3.2.0 (footer tag + settings panel).
+
+### Security / Truthfulness Notes
+- The Firebase web config in `index.html` is intentionally public; security is enforced by Firestore rules + Auth, not by hiding config values.
+- The Anthropic API key remains fully server-side, now in Cloud Secret Manager (`ANTHROPIC_API_KEY`) instead of a Netlify env var.
+- Setting `OWNER_UID` locks the proxy to a single account — recommended.
+
+### Migration Notes
+- Requires the Blaze (pay-as-you-go) plan for Cloud Functions. A single-user pool tool sits comfortably in the free allowance (~$0/mo); a budget alert is recommended as a guardrail.
+- The old Netlify files (`netlify.toml`, `netlify/functions/claude.js`) are retired but kept under `netlify-old/` for reference; they can be deleted once Firebase is confirmed working.
+- Full step-by-step in `FIREBASE-SETUP.md`.
+
+### Version
+- Bumped 3.1.6 → 3.2.0.
+
+---
+
 ## [3.1.6] — 2026-06-20
 
 ### Route Strip Scans to a Stronger Vision Model — Patch

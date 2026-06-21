@@ -235,46 +235,9 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v3.2.0</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v3.1.6</span></div>
   </div>
 </div>
-
-<!-- sign-in gate -->
-<div id="authGate" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,#0b1a26,#081420);display:none;align-items:center;justify-content:center;padding:24px">
-  <div style="max-width:340px;width:100%;text-align:center;animation:fadeIn .4s ease">
-    <div style="font-family:'Playfair Display',serif;font-size:32px;color:#eafcfb;margin-bottom:6px">Clarity</div>
-    <div style="color:rgba(255,255,255,.45);font-size:14px;margin-bottom:30px;line-height:1.55">Your personal pool co-pilot.<br>Sign in to sync your pool across devices.</div>
-    <button id="signInBtn" style="width:100%;padding:14px;border-radius:13px;border:1px solid rgba(120,200,225,.3);background:rgba(255,255,255,.06);color:#eafcfb;font-size:15px;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px">
-      <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.71-1.57 2.68-3.89 2.68-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.59A8.99 8.99 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
-      Sign in with Google
-    </button>
-    <div id="authErr" style="color:#ec8a72;font-size:12px;margin-top:14px;min-height:16px"></div>
-  </div>
-</div>
-
-<!-- Firebase SDK (compat build — exposes the global `firebase`) -->
-<script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js"></script>
-<script>
-/* ─── Firebase config ───────────────────────────────────────────────
-   Paste YOUR project's web config below. Find it in the Firebase
-   console → Project settings (gear) → General → Your apps →
-   "SDK setup and configuration" → Config.
-   NOTE: these values are NOT secret — they ship in the page on purpose.
-   Security is enforced by Firestore rules + Auth, not by hiding them. */
-const firebaseConfig = {
-  apiKey: "PASTE_API_KEY",
-  authDomain: "PASTE_PROJECT_ID.firebaseapp.com",
-  projectId: "PASTE_PROJECT_ID",
-  storageBucket: "PASTE_PROJECT_ID.appspot.com",
-  messagingSenderId: "PASTE_SENDER_ID",
-  appId: "PASTE_APP_ID",
-};
-firebase.initializeApp(firebaseConfig);
-const fbAuth = firebase.auth();
-const fbDb = firebase.firestore();
-</script>
 
 <!-- task editor -->
 <div class="scrim" id="taskScrim">
@@ -377,37 +340,7 @@ function defaultTasks(){
     {id:7,t:'Inspect equipment & water level',freq:'Weekly',int:7,last:now-6*day,done:false},
   ];
 }
-/* ── Persistence: localStorage cache + Firestore cloud sync ── */
-let _uid=null, _pushT=null;
-function cloudDoc(){return _uid?fbDb.collection('clarity').doc(_uid):null;}
-function persistLocal(){store.set('gallons',S.gallons);store.set('history',S.history);store.set('tasks',S.tasks);store.set('poolNotes',S.poolNotes);store.set('poolProfile',S.poolProfile);}
-function cloudPush(){
-  const doc=cloudDoc();if(!doc)return;
-  clearTimeout(_pushT);
-  _pushT=setTimeout(()=>{
-    doc.set({gallons:S.gallons,history:S.history,tasks:S.tasks,poolNotes:S.poolNotes,poolProfile:S.poolProfile,updatedAt:Date.now()},{merge:true})
-      .catch(e=>console.warn('Cloud sync (push) failed:',e.message));
-  },800);
-}
-function persist(){persistLocal();cloudPush();}
-async function cloudHydrate(){
-  const doc=cloudDoc();if(!doc)return;
-  try{
-    const snap=await doc.get();
-    if(snap.exists){
-      const d=snap.data()||{};
-      if(d.gallons!=null)S.gallons=d.gallons;
-      if(Array.isArray(d.history))S.history=d.history;
-      if(Array.isArray(d.tasks))S.tasks=d.tasks;
-      if(typeof d.poolNotes==='string')S.poolNotes=d.poolNotes;
-      if(d.poolProfile)S.poolProfile=d.poolProfile;
-      persistLocal();
-    }else{
-      // First sign-in on this account → seed the cloud with current local state.
-      cloudPush();
-    }
-  }catch(e){console.warn('Cloud sync (hydrate) failed:',e.message);}
-}
+function persist(){store.set('gallons',S.gallons);store.set('history',S.history);store.set('tasks',S.tasks);store.set('poolNotes',S.poolNotes);store.set('poolProfile',S.poolProfile);}
 
 const $=id=>document.getElementById(id);
 const TABS=[['dash','Dashboard'],['chat','Chat'],['chem','Chemistry'],['history','History'],['schedule','Schedule']];
@@ -479,10 +412,7 @@ function renderSetup(){
       <textarea id="poolNotesInput" style="width:100%;min-height:70px;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:11px;padding:10px 12px;color:var(--txt);font-size:13px;font-family:inherit;resize:vertical;line-height:1.5" placeholder="Anything else Clarity should know — e.g. 'has a slow leak', 'recently replastered', 'lots of trees nearby'…">${esc(S.poolNotes)}</textarea>
       <div class="hint">These notes are sent to Clarity with every message so it understands your pool's ongoing situation.</div></div>
 
-      <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
-        <button onclick="fbAuth.signOut()" style="background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--mut);font-size:11px;font-family:inherit;padding:7px 14px;border-radius:9px;cursor:pointer">Sign out</button>
-        <span style="font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v3.2.0</span>
-      </div>
+      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v3.1.6</div>
     </div>`;
 
   // Gallon chips
@@ -1382,15 +1312,10 @@ async function callClaude(body){
   lastCallTime=now;
   checkUsage();
   let resp;
-  let token=null;
-  try{token=fbAuth.currentUser?await fbAuth.currentUser.getIdToken():null;}catch(e){}
-  const hdrs={'Content-Type':'application/json'};
-  if(token)hdrs['Authorization']='Bearer '+token;
-  try{resp=await fetch('/api/claude',{method:'POST',headers:hdrs,body:JSON.stringify(body)});}
-  catch(e){throw new Error('Cannot reach the server. Check your connection — the AI features need the Firebase function deployed.');}
+  try{resp=await fetch('/.netlify/functions/claude',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});}
+  catch(e){throw new Error('Cannot reach the server. If testing locally, deploy to Netlify first — the AI features need the serverless function.');}
   const text=await resp.text();
-  if(resp.status===404)throw new Error('Proxy not found. Make sure the "claude" function is deployed and the /api/claude rewrite is live (firebase deploy).');
-  if(resp.status===401||resp.status===403)throw new Error('Sign-in problem — try signing out and back in.');
+  if(resp.status===404)throw new Error('Serverless function not found. Make sure netlify/functions/claude.js is deployed and ANTHROPIC_API_KEY is set in Netlify environment variables.');
   if(!text)throw new Error(`Empty response (status ${resp.status}). Check Netlify function logs for errors.`);
   let data;
   try{data=JSON.parse(text);}catch(e){throw new Error(`Server returned non-JSON (status ${resp.status}): ${text.slice(0,200)}`);}
@@ -1570,27 +1495,7 @@ $('tSave').onclick=saveTask;
 $('tDelete').onclick=()=>{if(S.editTask&&confirm('Delete this task?')){S.tasks=S.tasks.filter(x=>x.id!==S.editTask);persist();closeScrim('taskScrim');render();}};
 $('taskScrim').onclick=e=>{if(e.target.id==='taskScrim')closeScrim('taskScrim')};
 
-/* ── Auth gate & boot ──
-   The app only renders after sign-in. While signed out, the gate overlay
-   covers everything. On sign-in we pull cloud data, then render. */
-const _authGate=$('authGate'), _authErr=$('authErr');
-$('signInBtn').onclick=()=>{
-  _authErr.textContent='';
-  fbAuth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
-    .catch(e=>{_authErr.textContent=e.message||'Sign-in failed. Try again.';});
-};
-fbAuth.onAuthStateChanged(async user=>{
-  if(user){
-    _uid=user.uid;
-    _authGate.style.display='none';
-    await cloudHydrate();
-    render();
-  }else{
-    _uid=null;
-    _authGate.style.display='flex';
-  }
-});
-
+render();
 </script>
 </body>
 </html>
