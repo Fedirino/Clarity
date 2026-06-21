@@ -4,6 +4,103 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [4.1.0] — 2026-06-21
+
+### Phase 4 (start) — Weather-Aware Alerts — Minor Release
+
+**Overview**: Clarity now looks at the sky. Add your location once in settings and Clarity pulls the real local forecast and turns it into pool-specific cautions: hot, high-UV days mean free chlorine will burn off faster (test sooner, keep FC near the top of its range); incoming rain means dilution and a likely pH/alkalinity drop (test and rebalance after it passes). The forecast also feeds Clarity's chat, so its advice is weather-aware. Everything is grounded in real data from Open-Meteo — a free, no-API-key, CORS-friendly service called directly from the browser — and if the forecast can't be fetched, Clarity says so rather than guessing.
+
+### Added
+- **Weather engine (`fetchWeather` / `geocodeLocation` / `setPoolLocation`)**: client-side calls to Open-Meteo's geocoding + forecast APIs (no key, no Cloud Function change). Location (city/ZIP) is geocoded once and stored in the pool profile (syncs to Firestore); the 4-day daily forecast (max temp, UV index, precipitation amount + probability) is fetched on sign-in and cached for 30 minutes, with a manual refresh.
+- **Deterministic alert engine (`computeWeatherAlerts`)**: over the next ~3 days, flags **heat/UV** (≥90°F or UV ≥8 → "hot & sunny"; ≥100°F or UV ≥10 → "scorcher") and **rain** (≥0.3 in or ≥70% chance). Each alert explains the chemistry impact in plain language. All thresholds are fixed constants; no number is invented.
+- **"Weather Watch" dashboard card (`renderWeatherCard`)**: shows today's high/UV, the active alerts (amber/coral by severity), or a clean "nothing unusual" note — plus a prompt to set a location when none is saved, and honest error text when the service is unreachable.
+- **Location field in settings**: a "Location (for weather alerts)" input; on entry it geocodes and shows the resolved place (📍) or a friendly not-found message.
+- **Weather-aware chat context (`buildWeatherContext`)**: the real forecast and active alerts are injected into Clarity's system context, with instructions to make chlorine/pH advice weather-aware without inventing values beyond the forecast.
+
+### Changed
+- Dashboard now leads with Weather Watch above the Pool Model card. Chat context order: profile → notes → **weather** → pool model → insights → history.
+
+### Truthfulness Notes
+- All weather data is real and attributed ("Forecast via Open-Meteo"); Clarity never fabricates a forecast. Missing fields or a failed fetch produce no alerts and an honest message, never a guess.
+- Weather is used to *flag risk*, not to silently rewrite the learned chlorine-decay number — Clarity cautions that decay may run faster in heat rather than inventing a new rate it hasn't verified.
+- Location is used only to fetch the forecast.
+
+### Version
+- Bumped 4.0.0 → 4.1.0 (Phase 4 begins — weather alerts). Both in-app version strings updated.
+
+### Release note
+- The v4.0.0 archive (`old-v4_0_0.html`) should be generated from git during the Cloud Shell deploy. Before committing v4.1.0, while `HEAD` is still v4.0.0: `git show HEAD:index.html > old-v4_0_0.html`.
+
+---
+
+## [4.0.0] — 2026-06-21
+
+### Phase 3 — The Action Set (Clarity becomes an agent) — Major Release
+
+**Overview**: Clarity stops only *talking* and starts *doing the bookkeeping for you* — with your permission, every time. When you tell Clarity you added chlorine, or ask it to remind you to retest, or mention a durable fact about your pool, it now proposes the matching action as an inline **✓ / ✗ confirm chip** right in the chat. Nothing is ever written until you tap ✓ — the model proposes, *the app* performs the write, and it shows you exactly what was saved. This is the line the spec drew between an advisor and an agent: Clarity can now log treatments, set reminders, build your schedule, update your profile, and remember facts you confirm — all without leaving the conversation, and all without inventing anything.
+
+### Added
+- **Agent action layer (`parseActions` + `runAction`)**: Clarity proposes actions in a hidden `<!--ACTIONS:[…]-->` block (the same proven pattern as strip `READINGS`). The app parses it, renders confirm chips, and executes locally. Five tools:
+  - **`record_action`** — log a dose/treatment (Added Chlorine, Shocked, pH Up/Down, etc.) with amount; attaches to a just-logged reading or creates a treatment entry. Powers effectiveness tracking.
+  - **`set_reminder`** — a dated reminder ("retest in 3 days") as a task.
+  - **`update_schedule`** — add a recurring maintenance task.
+  - **`update_profile`** — save a durable pool fact (sanitizer, surface, equipment…) or a free-text note.
+  - **`record_belief`** — note a qualitative fact *you stated* about the pool, stored as an **owner-confirmed observation kept separate from Clarity's measured beliefs**.
+- **Confirmation chips in chat (`renderActionChips` / `executeAction` / `dismissAction`)**: every proposed write shows a ✓ Save/Add and ✗ Dismiss control, then collapses to "✓ Done" or "Dismissed". Nothing is saved without your tap.
+- **"You've told me" section** in the *What Clarity Knows* card: lists owner-confirmed observations, explicitly labeled as facts you confirmed — distinct from what Clarity measured.
+- **Action-aware system prompt + context**: Clarity is instructed to propose actions only when you clearly want them, to never claim something is already saved, and to never fabricate details. Owner-confirmed facts are fed back into context as stated facts (no derived confidence %).
+
+### Changed
+- Assistant messages are now parsed for both `READINGS` and `ACTIONS` blocks; the hidden block is stripped from the visible reply.
+- Pool Model structure bumped to `version: 3` with a `normalizePoolModel()` migration adding the `observations` array.
+
+### Truthfulness Notes
+- **Confirm-before-write everywhere**: the model can only *propose*; the owner's tap performs every write. No silent state changes.
+- **No fabricated actions**: Clarity proposes actions only from what you actually said; it never invents amounts, facts, or treatments.
+- **Beliefs vs. observations stay separated**: `record_belief` stores owner-stated facts in a distinct list that never receives a measured-confidence %, so the deterministic Pool Model is never polluted by unverified claims.
+- **Forecast honesty preserved**: logging a chlorine addition via `record_action` voids any open free-chlorine forecast (it can no longer be fairly judged), keeping the Phase 2 scorecard accurate.
+
+### Version
+- Bumped 3.8.0 → 4.0.0 (Phase 3 complete — Clarity is now an agent). Both in-app version strings updated.
+
+### Release note
+- The v3.8.0 archive (`old-v3_8_0.html`) should be generated from git during the Cloud Shell deploy (the workspace file-sync truncates this large file locally). Before committing v4.0.0, while `HEAD` is still v3.8.0: `git show HEAD:index.html > old-v3_8_0.html`.
+
+---
+
+## [3.8.0] — 2026-06-21
+
+### Phase 2 — Predict & Verify (the learning loop closes) — Minor Release
+
+**Overview**: This is the milestone where Clarity stops only *describing* your pool and starts *forecasting* it — then holds itself accountable. From the chlorine-decay rate it already learned, Clarity now makes a concrete, dated forecast of where free chlorine is heading ("FC should be about 1.5 ppm by Thu if you don't add chlorine"). When your next test is logged, Clarity checks that forecast against what actually happened, marks it **held** or **missed**, and lets its own hit-rate nudge its confidence up or down. Forecasts are made only when there's a real basis (a learned decay rate **and** a current reading); a forecast that can't be fairly judged — because chlorine was added before the next test — is **set aside (void)**, never scored. Every number is computed deterministically: Clarity narrates, the math decides.
+
+### Added
+- **Forecasts (`S.poolModel.predictions`)**: a persistent, capped list of dated free-chlorine forecasts, each storing its baseline reading, the decay rate used, the predicted value, the due date, and — once checked — the actual value, the error, and a status of `open` / `confirmed` / `missed` / `void`. Syncs to Firestore + localStorage with the rest of the model.
+- **Prediction engine (`generateFcPrediction`)**: makes at most one open FC forecast at a time, only when a learned decay rate and a current chlorine reading both exist. Also reports how many days until FC reaches the minimum line.
+- **Verification step (`verifyPredictions`)**: runs on every new reading. Compares actual FC against the decay-projected expectation (tolerance = max(0.5 ppm, 25%)). Marks the forecast `confirmed`, `missed`, or — if chlorine was added in the meantime — `void`, so an un-judgeable forecast is never counted against the model.
+- **Confidence that learns from being checked (`beliefTrackRecord` + `_confAdjFromRecord`)**: a belief's confidence is now nudged by the track record of the forecasts it produced — centered on a 70% hit-rate, weighted by sample size, bounded to roughly −20…+10 points. A belief that keeps producing wrong forecasts *loses* confidence automatically; one that keeps being right gains a little.
+- **Forecast scorecard + open forecast on the "What Clarity Knows" card**: shows "Forecasts that held — N/M · P%" with a bar, the result of the last check (✓ held / ✗ off by X ppm / ↩ set aside), and the current open forecast. If there's no decay rate yet, it says so honestly instead of forecasting.
+- **Forecast-aware Claude context**: the open forecast, each belief's track record, and the overall accuracy are injected into chat, with explicit instructions never to invent, alter, or pre-confirm a forecast, and to report the accuracy honestly.
+
+### Changed
+- `logReading` now closes the loop on every new reading: verify open forecasts → recompute beliefs (now adjusted by track record) → make the next forecast.
+- `updatePoolModel` applies the track-record confidence adjustment and generates the next forecast.
+- Pool Model structure bumped to `version: 2` with a `normalizePoolModel()` migration so existing v1 models gain the `predictions` array safely.
+
+### Truthfulness Notes
+- **No forecast without a basis**: a forecast requires a learned decay rate (2+ chlorine-free intervals) *and* a current reading. Otherwise Clarity says it can't forecast yet.
+- **Un-judgeable forecasts are voided, not scored**: adding chlorine before the next test sets the forecast aside rather than counting it as a hit or miss.
+- **Accountability is visible**: the scorecard surfaces accuracy so a model that is wrong cannot hide it; confidence moves only on *verified* outcomes.
+- All forecast math is deterministic and inspectable; Claude narrates but never produces the numbers.
+
+### Version
+- Bumped 3.5.0 → 3.8.0 (Phase 2 complete). Both in-app version strings updated.
+
+### Release note
+- The v3.5.0 archive (`old-v3_5_0.html`) should be generated from git during the Cloud Shell deploy (the workspace file-sync truncates this large file locally). Before committing v3.8.0, while `HEAD` is still v3.5.0: `git show HEAD:index.html > old-v3_5_0.html`.
+
+---
+
 ## [3.5.0] — 2026-06-21
 
 ### Phase 1 — The Pool Model + Chlorine-Decay Bug Fix — Minor Release

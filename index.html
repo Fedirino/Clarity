@@ -235,7 +235,7 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v3.5.0</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v4.1.0</span></div>
   </div>
 </div>
 
@@ -361,7 +361,7 @@ let S={
     type:null, surface:null, filter:null, climate:null,
     sun:null, water:null, usage:null, equipment:[]
   },
-  poolModel: store.get('poolModel')||{version:1,enabled:false,createdAt:null,updatedAt:null,beliefs:[],openQuestions:[]},
+  poolModel: store.get('poolModel')||{version:3,enabled:false,createdAt:null,updatedAt:null,beliefs:[],openQuestions:[],predictions:[],observations:[]},
   messages:[{role:'assistant',content:"Hi! I'm Clarity, your personal pool co-pilot.\n\nI learn your pool's patterns over time and give advice specific to YOUR pool — not generic tips.\n\n**First time?** Tap ⚙ to set up your pool profile so I can give you personalized advice from day one.\n\n📷 To scan, dip the strip, then slide it into the channel on the LEFT EDGE of the AquaChek reference card and photograph the whole card in even, indirect light (no flash). Reading the strip against the card's swatches in the same shot is how I stay accurate. I can also look at algae, cloudy water, or equipment. If a pad is unclear I'll say so rather than guess."}],
   tab:'dash', thinking:false, setupOpen:false, editTask:null,
   _pendingImage:null,
@@ -403,6 +403,7 @@ async function cloudHydrate(){
       if(typeof d.poolNotes==='string')S.poolNotes=d.poolNotes;
       if(d.poolProfile)S.poolProfile=d.poolProfile;
       if(d.poolModel)S.poolModel=d.poolModel;
+      normalizePoolModel();
       persistLocal();
     }else{
       // First sign-in on this account → seed the cloud with current local state.
@@ -477,13 +478,17 @@ function renderSetup(){
       <div class="lab">Equipment <span style="color:var(--mut2);text-transform:none;letter-spacing:0">(select all that apply)</span></div>
       <div class="chips">${chipSet('equipment',['Heater','Salt Cell','Automation','Cover','UV/Ozone','Robot Cleaner'],true)}</div>
 
+      <div style="margin-top:16px"><div class="lab">Location <span style="color:var(--mut2);text-transform:none;letter-spacing:0">(for weather alerts)</span></div>
+      <input id="locInput" type="text" value="${esc(P.location||'')}" placeholder="City, State or ZIP — e.g. Austin, TX" style="width:100%;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:11px;padding:10px 12px;color:var(--txt);font-size:13px;font-family:inherit">
+      ${P.locLabel?`<div class="hint" style="color:var(--green)">📍 ${esc(P.locLabel)} — Clarity will watch heat, UV and rain for you.</div>`:(S._wxErr&&P.lat==null?`<div class="hint" style="color:var(--coral)">${esc(S._wxErr)}</div>`:`<div class="hint">Clarity uses this only to fetch the local forecast (heat & UV burn off chlorine; rain throws off balance).</div>`)}</div>
+
       <div style="margin-top:16px"><div class="lab">Pool notes & conditions</div>
       <textarea id="poolNotesInput" style="width:100%;min-height:70px;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:11px;padding:10px 12px;color:var(--txt);font-size:13px;font-family:inherit;resize:vertical;line-height:1.5" placeholder="Anything else Clarity should know — e.g. 'has a slow leak', 'recently replastered', 'lots of trees nearby'…">${esc(S.poolNotes)}</textarea>
       <div class="hint">These notes are sent to Clarity with every message so it understands your pool's ongoing situation.</div></div>
 
       <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
         <button onclick="fbAuth.signOut()" style="background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--mut);font-size:11px;font-family:inherit;padding:7px 14px;border-radius:9px;cursor:pointer">Sign out</button>
-        <span style="font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v3.5.0</span>
+        <span style="font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v4.1.0</span>
       </div>
     </div>`;
 
@@ -502,6 +507,10 @@ function renderSetup(){
     }
     persist();renderSetup();
   });
+
+  // Location (weather) — geocode on change/enter
+  const locEl=$('locInput');
+  if(locEl)locEl.onchange=()=>{setPoolLocation(locEl.value);};
 
   // Notes
   const notesEl=$('poolNotesInput');
@@ -541,6 +550,93 @@ function parseReadings(text){
     if(data.confidence)delete data.confidence;
     return{clean,readings:data,confidence};
   }catch(e){return null;}
+}
+
+/* ── Phase 3 (v4.0): the action set. Clarity PROPOSES writes in a hidden block;
+   nothing is saved without the owner's confirm tap (a ✓ chip). The app — never the
+   model — performs the write and shows exactly what was done. Reads stay in context;
+   these are the bookkeeping actions Clarity can do FOR you. ── */
+const ACTION_TOOLS={
+  record_action:'Record a dose/treatment',
+  set_reminder:'Set a reminder',
+  update_schedule:'Add a maintenance task',
+  update_profile:'Save a pool fact',
+  record_belief:'Note something about the pool'
+};
+function parseActions(text){
+  const m=text.match(/<!--ACTIONS:(.*?)-->/s);
+  if(!m)return null;
+  try{
+    let acts=JSON.parse(m[1]);
+    if(!Array.isArray(acts))acts=[acts];
+    acts=acts.filter(a=>a&&ACTION_TOOLS[a.tool]).slice(0,4);
+    const clean=text.replace(/\n?<!--ACTIONS:.*?-->/s,'').trim();
+    return acts.length?{clean,actions:acts}:{clean,actions:[]};
+  }catch(e){return null;}
+}
+
+// Void any open free-chlorine forecast — chlorine was just added, so a decay-only
+// forecast can no longer be fairly judged. Keeps the scorecard honest.
+function voidOpenFcForecasts(reason){
+  const pm=S.poolModel;
+  if(!pm||!Array.isArray(pm.predictions))return;
+  pm.predictions.forEach(p=>{
+    if(p.status==='open'&&p.param==='chlorine'){p.status='void';p.verifiedAt=Date.now();p.note=reason||'chlorine added — forecast not applicable';}
+  });
+}
+
+// Execute a confirmed action LOCALLY. Returns a short human summary of what was done.
+function runAction(a){
+  const args=a.args||{};
+  if(a.tool==='record_action'){
+    const action=(args.action||'').trim()||'Nothing';
+    const amt=(args.amount||args.amt||'').toString().trim();
+    const note=(args.note||'').toString().trim();
+    const recent=S.history[0];
+    const fresh=recent&&(Date.now()-recent.timestamp)<6*36e5&&!recent.action; // attach to a reading logged in the last 6h
+    if(fresh){
+      recent.action=action; if(amt)recent.actionAmt=amt; if(note)recent.notes=note;
+    }else{
+      const entry={timestamp:Date.now(),gallons:S.gallons,action,actionAmt:amt,notes:note};
+      KEYS.forEach(k=>entry[k]=null);
+      S.history=[entry,...S.history].slice(0,60);
+    }
+    if(action==='Added Chlorine'||action==='Shocked')voidOpenFcForecasts('you added chlorine — earlier forecast set aside');
+    persist();
+    return `Recorded: ${action}${amt?' · '+amt:''}`;
+  }
+  if(a.tool==='set_reminder'||a.tool==='update_schedule'){
+    const title=(args.title||args.t||'Reminder').toString().trim();
+    const inDays=Number(args.inDays);
+    const int=Number.isFinite(Number(args.int))&&Number(args.int)>0?Number(args.int):(Number.isFinite(inDays)&&inDays>0?inDays:7);
+    const freq=(args.freq||(a.tool==='set_reminder'?'Reminder':'Custom')).toString();
+    const last=Date.now()-(Number.isFinite(inDays)?(int-inDays):0)*864e5; // due in ~inDays (default: a full interval out)
+    const task={id:Date.now()+Math.floor(Math.random()*1000),t:title,freq,int,last,done:false};
+    S.tasks=[...S.tasks,task];
+    persist();
+    return `Added to schedule: “${title}” · due in ~${Math.max(1,Math.round((task.last+int*864e5-Date.now())/864e5))} day(s)`;
+  }
+  if(a.tool==='update_profile'){
+    const P=S.poolProfile;
+    const profFields=['type','surface','filter','climate','sun','water','usage'];
+    const field=(args.field||'').toString().trim();
+    const value=(args.value||'').toString().trim();
+    if(field==='equipment'&&value){P.equipment=Array.isArray(P.equipment)?P.equipment:[];if(!P.equipment.includes(value))P.equipment.push(value);persist();return `Saved equipment: ${value}`;}
+    if(profFields.includes(field)&&value){P[field]=value;persist();return `Saved ${field}: ${value}`;}
+    const note=(args.note||value||'').toString().trim();
+    if(note){S.poolNotes=(S.poolNotes?S.poolNotes.replace(/\s*$/,'')+'\n':'')+note;persist();return `Added to pool notes: ${note.length>60?note.slice(0,57)+'…':note}`;}
+    return 'Nothing to save';
+  }
+  if(a.tool==='record_belief'){
+    const text=(args.observation||args.text||args.claim||'').toString().trim();
+    if(!text)return 'Nothing to note';
+    const pm=S.poolModel; normalizePoolModel();
+    if(!pm.observations.some(o=>o.text===text))pm.observations.unshift({text,ts:Date.now()});
+    pm.observations=pm.observations.slice(0,20);
+    persist();
+    return `Noted: ${text.length>60?text.slice(0,57)+'…':text}`;
+  }
+  return 'Unknown action';
 }
 
 function renderResultsCard(readings,msgIdx,confidence){
@@ -669,6 +765,10 @@ function renderDash(b){
       <div style="font-size:14px;margin-top:3px;font-weight:500">${daysSince}</div></div>
     <button class="chip on" onclick="S.tab='chat';render()">Test now →</button>
   </div>`;
+
+  // Weather Watch (Phase 4) — real forecast → pool-specific cautions
+  if(S.poolProfile.lat!=null)fetchWeather(); // self-guards: only fetches when stale
+  html+=renderWeatherCard();
 
   // What Clarity Knows (Pool Model)
   html+=renderPoolModelCard();
@@ -896,6 +996,55 @@ function renderDash(b){
   if($('nudgeSetup'))$('nudgeSetup').onclick=()=>{S.setupOpen=true;renderSetup();};
 }
 
+function actionSummary(a){
+  if(a.label)return a.label;
+  const x=a.args||{};
+  if(a.tool==='record_action')return `${x.action||'Action'}${x.amount?' · '+x.amount:''}`;
+  if(a.tool==='set_reminder'||a.tool==='update_schedule')return `${x.title||'Task'}${x.inDays?' · in '+x.inDays+' day(s)':''}`;
+  if(a.tool==='update_profile')return x.note||(x.field?`${x.field}: ${x.value}`:'pool fact');
+  if(a.tool==='record_belief')return x.observation||x.text||x.claim||'note';
+  return a.tool;
+}
+function renderActionChips(actions,msgIdx){
+  if(!actions||!actions.length)return'';
+  if(!S._actionState)S._actionState=new Map();
+  let h=`<div class="actwrap" style="margin-top:10px">`;
+  actions.forEach((a,ai)=>{
+    const st=S._actionState.get(msgIdx+':'+ai);
+    const icon=a.tool==='record_action'?'🧪':a.tool==='update_profile'?'📝':a.tool==='record_belief'?'💡':'🗓️';
+    const verb=(a.tool==='set_reminder'||a.tool==='update_schedule')?'Add':'Save';
+    h+=`<div class="actcard" style="background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:7px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:${st?'0':'8px'}">
+        <span>${icon}</span>
+        <div style="flex:1;min-width:0">
+          <div class="mono" style="font-size:8.5px;color:var(--mut2);letter-spacing:1px;text-transform:uppercase">${ACTION_TOOLS[a.tool]||a.tool}</div>
+          <div style="font-size:12.5px;color:var(--txt);line-height:1.35">${esc(actionSummary(a))}</div>
+        </div>
+        ${st==='done'?`<span style="font-size:11px;color:var(--green);white-space:nowrap">✓ Done</span>`:st==='dismissed'?`<span style="font-size:11px;color:var(--mut2);white-space:nowrap">Dismissed</span>`:''}
+      </div>`;
+    if(!st)h+=`<div style="display:flex;gap:7px">
+        <button class="act-do chip on" data-mi="${msgIdx}" data-ai="${ai}" style="font-size:11.5px;padding:5px 12px">✓ ${verb}</button>
+        <button class="act-no chip" data-mi="${msgIdx}" data-ai="${ai}" style="font-size:11.5px;padding:5px 12px">✗ Dismiss</button>
+      </div>`;
+    h+=`</div>`;
+  });
+  return h+`</div>`;
+}
+function executeAction(mi,ai){
+  const msg=S.messages[mi];
+  if(!msg||!msg._actions||!msg._actions[ai])return;
+  if(!S._actionState)S._actionState=new Map();
+  if(S._actionState.get(mi+':'+ai))return; // already handled
+  runAction(msg._actions[ai]);
+  S._actionState.set(mi+':'+ai,'done');
+  render();
+}
+function dismissAction(mi,ai){
+  if(!S._actionState)S._actionState=new Map();
+  S._actionState.set(mi+':'+ai,'dismissed');
+  render();
+}
+
 function renderChat(b){
   const quick=["How often should I test my water?","My water looks cloudy — what do I check?","How do I shock my pool?","Send me a photo of your test strip and I'll read it"];
   let html='<div class="bin">';
@@ -905,7 +1054,7 @@ function renderChat(b){
     const imgHtml=m._image?`<img class="msg-img" src="${m._image}">`:'';
     const sentBadge=m._imageSize?`<div style="font-size:9px;color:var(--green);margin-top:4px;font-family:'DM Mono',monospace">📷 Image sent (${Math.round(m._imageSize/1024)}KB)</div>`:'';
     let displayText=m.content;
-    let cardHtml='';
+    let cardHtml='', actHtml='';
     if(!u){
       const parsed=parseReadings(m.content);
       if(parsed){
@@ -913,8 +1062,11 @@ function renderChat(b){
         m._readings=parsed.readings;
         cardHtml=renderResultsCard(parsed.readings,idx,parsed.confidence);
       }
+      const aParsed=parseActions(displayText);
+      if(aParsed){displayText=aParsed.clean;m._actions=aParsed.actions;}
+      if(m._actions&&m._actions.length)actHtml=renderActionChips(m._actions,idx);
     }
-    html+=`<div class="msg ${u?'u':''}">${u?'':`<div class="av">${AV}</div>`}<div class="bub ${u?'u':'a'}">${imgHtml}${esc(displayText)}${sentBadge}${cardHtml}</div></div>`;
+    html+=`<div class="msg ${u?'u':''}">${u?'':`<div class="av">${AV}</div>`}<div class="bub ${u?'u':'a'}">${imgHtml}${esc(displayText)}${sentBadge}${cardHtml}${actHtml}</div></div>`;
   });
   if(S.thinking)html+=`<div class="msg"><div class="av">${AV}</div><div class="dots"><i style="animation-delay:0s"></i><i style="animation-delay:.2s"></i><i style="animation-delay:.4s"></i></div></div>`;
   if(S.messages.length===1&&!S.thinking){
@@ -936,6 +1088,8 @@ function renderChat(b){
       }
     };
   });
+  b.querySelectorAll('.act-do').forEach(btn=>btn.onclick=e=>{e.stopPropagation();executeAction(+btn.dataset.mi,+btn.dataset.ai);});
+  b.querySelectorAll('.act-no').forEach(btn=>btn.onclick=e=>{e.stopPropagation();dismissAction(+btn.dataset.mi,+btn.dataset.ai);});
   $('bottom')?.scrollIntoView({behavior:'smooth'});
 }
 
@@ -1144,10 +1298,136 @@ function closeScrim(id){$(id).classList.remove('on')}
 
 function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 
+/* ── Phase 4 (v4.1): weather-aware alerts. Real forecast data from Open-Meteo
+   (free, no API key, CORS-friendly) drives honest, pool-specific cautions —
+   heat + UV burn off free chlorine; rain dilutes water and pulls pH/alkalinity
+   down. Nothing is invented: if we can't fetch real weather, Clarity says so. ── */
+const WX={tmaxHot:90,tmaxScorcher:100,uvHigh:8,uvExtreme:10,rainIn:0.3,rainProb:70};
+let _wxFetching=false;
+
+async function geocodeLocation(q){
+  const r=await fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name='+encodeURIComponent(q));
+  if(!r.ok)throw new Error('geocode http '+r.status);
+  const d=await r.json();
+  if(!d.results||!d.results.length)throw new Error('not found');
+  const g=d.results[0];
+  return {lat:g.latitude,lon:g.longitude,label:[g.name,g.admin1,g.country_code].filter(Boolean).join(', ')};
+}
+
+async function setPoolLocation(q){
+  const P=S.poolProfile, query=(q||'').trim();
+  if(!query){P.location=null;P.lat=null;P.lon=null;P.locLabel=null;S._weather=null;S._wxErr=null;persist();render();return;}
+  try{
+    const g=await geocodeLocation(query);
+    P.location=query;P.lat=g.lat;P.lon=g.lon;P.locLabel=g.label;S._wxErr=null;persist();
+    await fetchWeather(true);
+  }catch(e){
+    P.lat=null;P.lon=null;P.locLabel=null;S._weather=null;
+    S._wxErr='Couldn’t find that location. Try “City, State” or a ZIP/postal code.';
+    persist();
+  }
+  render();
+}
+
+async function fetchWeather(force){
+  const P=S.poolProfile;
+  if(P.lat==null||P.lon==null||_wxFetching)return;
+  if(!force&&S._weather&&(Date.now()-S._weather.updatedAt<30*6e4))return; // 30-min cache
+  _wxFetching=true;
+  try{
+    const u='https://api.open-meteo.com/v1/forecast?latitude='+P.lat+'&longitude='+P.lon+
+      '&daily=temperature_2m_max,uv_index_max,precipitation_sum,precipitation_probability_max'+
+      '&temperature_unit=fahrenheit&precipitation_unit=inch&timezone=auto&forecast_days=4';
+    const r=await fetch(u);
+    if(!r.ok)throw new Error('forecast http '+r.status);
+    const d=await r.json();
+    if(!d.daily||!d.daily.time)throw new Error('no daily data');
+    S._weather={updatedAt:Date.now(),label:P.locLabel||P.location,daily:d.daily};S._wxErr=null;
+  }catch(e){
+    S._weather=null;S._wxErr='Couldn’t reach the weather service. I’ll try again later.';
+  }
+  _wxFetching=false;render();
+}
+
+// Deterministic alert engine over the next ~3 days. Only real forecast data — never invented.
+function computeWeatherAlerts(w){
+  if(!w||!w.daily||!w.daily.time)return [];
+  const D=w.daily, n=Math.min(3,D.time.length), alerts=[];
+  let maxT=-999,maxUV=0,maxRain=0,maxProb=0,rainDay=null;
+  for(let i=0;i<n;i++){
+    const t=D.temperature_2m_max&&D.temperature_2m_max[i], uv=D.uv_index_max&&D.uv_index_max[i];
+    const pr=D.precipitation_sum&&D.precipitation_sum[i], pp=D.precipitation_probability_max&&D.precipitation_probability_max[i];
+    if(t!=null&&t>maxT)maxT=t;
+    if(uv!=null&&uv>maxUV)maxUV=uv;
+    if(pr!=null&&pr>maxRain){maxRain=pr;rainDay=D.time[i];}
+    if(pp!=null&&pp>maxProb)maxProb=pp;
+  }
+  const dayName=iso=>{try{return new Date(iso+'T12:00').toLocaleDateString('en-US',{weekday:'short'});}catch(e){return'';}};
+  if(maxT>=WX.tmaxScorcher||maxUV>=WX.uvExtreme){
+    alerts.push({icon:'🔥',level:'high',title:`Scorcher ahead — ${Math.round(maxT)}°F${maxUV>=WX.uvHigh?', UV '+Math.round(maxUV):''}`,
+      text:`High heat and strong sun burn off free chlorine fast. Test in the next day or two, keep FC at the top of its range, and don’t let it dip before a hot afternoon.`});
+  }else if(maxT>=WX.tmaxHot||maxUV>=WX.uvHigh){
+    alerts.push({icon:'☀️',level:'warn',title:`Hot & sunny — up to ${Math.round(maxT)}°F${maxUV>=WX.uvHigh?', UV '+Math.round(maxUV):''}`,
+      text:`Warm, sunny days speed up chlorine loss. Plan to test a bit sooner than usual and keep chlorine near the high end of its range.`});
+  }
+  if(maxRain>=WX.rainIn||maxProb>=WX.rainProb){
+    alerts.push({icon:'🌧️',level:maxRain>=0.75?'high':'warn',title:`Rain likely${rainDay?' '+dayName(rainDay):''}${maxProb?` (${Math.round(maxProb)}%)`:''}`,
+      text:`Rain dilutes your water, can pull pH and alkalinity down, and washes in debris and contaminants. Test and rebalance after it passes, and skim or brush off any runoff.`});
+  }
+  return alerts;
+}
+
+function renderWeatherCard(){
+  const P=S.poolProfile, w=S._weather;
+  let html=`<div class="formcard" style="padding:14px 16px;margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div class="mono" style="font-size:9px;color:var(--aqua);letter-spacing:1.5px;text-transform:uppercase">Weather Watch</div>`;
+  if(P.lat!=null)html+=`<button class="chip" onclick="fetchWeather(true)" style="font-size:10px;padding:3px 9px">↻ Refresh</button>`;
+  html+=`</div>`;
+  if(P.lat==null)return html+`<div style="font-size:12px;color:var(--mut);line-height:1.5">Add your location in ⚙ settings and Clarity will watch the forecast — flagging when heat will burn off chlorine or rain will throw your water off balance.</div></div>`;
+  if(S._wxErr)return html+`<div style="font-size:12px;color:var(--mut);line-height:1.5">${esc(S._wxErr)}</div></div>`;
+  if(!w)return html+`<div style="font-size:12px;color:var(--mut2)">Checking the forecast…</div></div>`;
+  const alerts=computeWeatherAlerts(w), D=w.daily;
+  const t=Math.round((D.temperature_2m_max&&D.temperature_2m_max[0])||0), uv=Math.round((D.uv_index_max&&D.uv_index_max[0])||0);
+  html+=`<div style="font-size:11px;color:var(--mut2);margin-bottom:${alerts.length?'10':'4'}px">${esc(w.label||'')} · today ~${t}°F, UV ${uv}</div>`;
+  if(!alerts.length){
+    html+=`<div style="font-size:12px;color:var(--green);line-height:1.5">✓ Nothing unusual in the next few days — no weather that should throw your chemistry off.</div>`;
+  }else{
+    alerts.forEach(a=>{
+      const col=a.level==='high'?'var(--coral)':'#f0c040';
+      html+=`<div style="display:flex;gap:9px;align-items:flex-start;margin-bottom:9px">
+        <span style="font-size:15px;line-height:1.2">${a.icon}</span>
+        <div style="flex:1"><div style="font-size:12.5px;color:${col};font-weight:600;margin-bottom:1px">${esc(a.title)}</div>
+        <div style="font-size:11.5px;color:var(--mut);line-height:1.45">${esc(a.text)}</div></div>
+      </div>`;
+    });
+  }
+  return html+`<div style="font-size:9px;color:var(--mut2);margin-top:6px">Forecast via Open-Meteo${w.updatedAt?' · '+_timeAgo(w.updatedAt):''}</div></div>`;
+}
+
+function buildWeatherContext(){
+  const w=S._weather;
+  if(!w||!w.daily||!w.daily.time)return'';
+  const D=w.daily, n=Math.min(3,D.time.length), alerts=computeWeatherAlerts(w);
+  let s=`\n\nLOCAL WEATHER (real forecast from Open-Meteo for ${w.label||'the pool location'} — use it to make chlorine/pH advice weather-aware; do not invent values beyond what is listed):`;
+  for(let i=0;i<n;i++){
+    s+=`\n• ${D.time[i]}: high ${Math.round((D.temperature_2m_max&&D.temperature_2m_max[i])||0)}°F, UV ${Math.round((D.uv_index_max&&D.uv_index_max[i])||0)}, rain ${(((D.precipitation_sum&&D.precipitation_sum[i])||0)).toFixed(2)} in (${Math.round((D.precipitation_probability_max&&D.precipitation_probability_max[i])||0)}% chance)`;
+  }
+  if(alerts.length)s+='\nActive weather alerts: '+alerts.map(a=>a.title).join('; ')+'. Reflect these in your advice — heat/UV means chlorine burns off faster (keep FC high, test sooner); rain means dilution and lower pH/alkalinity (rebalance after).';
+  return s;
+}
+
 function logReading(read){
   const entry={timestamp:Date.now(),gallons:S.gallons,action:null,actionAmt:'',notes:''};
   KEYS.forEach(k=>entry[k]=read[k]??null);
   S.history=[entry,...S.history].slice(0,60);
+  // Close the learning loop: check open forecasts against this new reading, then
+  // recompute beliefs (now nudged by their track record) and make the next forecast.
+  if(S.poolModel&&S.poolModel.enabled){
+    normalizePoolModel();
+    verifyPredictions(entry);
+    updatePoolModel();
+  }
   persist();
 }
 
@@ -1340,14 +1620,138 @@ function computeBeliefs(){
   return {beliefs,open};
 }
 
+/* ── Pool Model Phase 2 (v3.8): predictions, verification, confidence-from-track-record.
+   The loop closes — Clarity forecasts free chlorine from the decay it has LEARNED,
+   then checks each forecast against the next real reading and lets its own hit-rate
+   move its confidence. Every number is computed deterministically: a forecast that
+   can't be grounded in a learned decay rate + a current reading is never made, and a
+   forecast that can't be fairly checked (chlorine was added) is voided, not scored. ── */
+const FC_TOL_MIN=0.5; // ppm — absolute tolerance floor for "the forecast held"
+
+function normalizePoolModel(){
+  const pm=S.poolModel;if(!pm)return;
+  if(!Array.isArray(pm.predictions))pm.predictions=[];
+  if(!Array.isArray(pm.beliefs))pm.beliefs=[];
+  if(!Array.isArray(pm.openQuestions))pm.openQuestions=[];
+  if(!Array.isArray(pm.observations))pm.observations=[]; // owner-confirmed facts (Phase 3), kept separate from computed beliefs
+  if(!pm.version||pm.version<3)pm.version=3;
+}
+
+// Current FC decay rate from chlorine-free intervals (same math the belief uses).
+function _fcDecayRate(){
+  const h=S.history, rates=[], day=864e5;
+  for(let i=0;i<h.length-1;i++){
+    const cur=h[i],prev=h[i+1];
+    if(cur.chlorine!=null&&prev.chlorine!=null&&cur.action!=='Added Chlorine'&&cur.action!=='Shocked'&&prev.action!=='Added Chlorine'&&prev.action!=='Shocked'){
+      const days=(cur.timestamp-prev.timestamp)/day;
+      if(days>0&&days<14)rates.push((prev.chlorine-cur.chlorine)/days);
+    }
+  }
+  if(rates.length<2)return null;
+  return {rate:Math.abs(rates.reduce((a,b)=>a+b,0)/rates.length),n:rates.length};
+}
+
+// Typical days between tests, from real history; bounded to a sane forecast horizon.
+function _testCadenceDays(){
+  const h=S.history,day=864e5;
+  if(h.length<2)return 7;
+  const gaps=[];
+  for(let i=0;i<Math.min(h.length-1,12);i++)gaps.push((h[i].timestamp-h[i+1].timestamp)/day);
+  const m=gaps.reduce((a,b)=>a+b,0)/gaps.length;
+  return (m>0.5&&m<30)?m:7;
+}
+
+// Make one open FC forecast — only if there's a learned decay rate AND a current reading.
+function generateFcPrediction(){
+  const pm=S.poolModel;
+  const d=_fcDecayRate();
+  const latest=S.history[0];
+  if(!d||!latest||latest.chlorine==null)return;            // truthfulness gate: no basis → no forecast
+  if(pm.predictions.some(p=>p.status==='open'&&p.param==='chlorine'))return; // one open FC forecast at a time
+  const day=864e5, horizon=_clamp(_testCadenceDays(),2,10);
+  const dueBy=latest.timestamp+horizon*day;
+  const predicted=Math.max(0,+(latest.chlorine-d.rate*horizon).toFixed(2));
+  const minLine=IDEAL.chlorine.min;
+  const daysToMin=d.rate>0?(latest.chlorine-minLine)/d.rate:null;
+  pm.predictions.unshift({
+    id:'fc-'+latest.timestamp,
+    param:'chlorine',
+    madeAt:Date.now(),
+    baselineTs:latest.timestamp,
+    baselineFc:latest.chlorine,
+    rate:+d.rate.toFixed(3),
+    horizonDays:+horizon.toFixed(1),
+    dueBy,
+    predicted,
+    claim:`Free chlorine should be about ${predicted} ppm by ${new Date(dueBy).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'})} if you don't add chlorine`,
+    daysToMin:(daysToMin!=null&&daysToMin>0&&daysToMin<60)?+daysToMin.toFixed(1):null,
+    basedOn:['fc-decay'],
+    status:'open', actual:null, expectedAtActual:null, error:null, verifiedAt:null, note:null
+  });
+  pm.predictions=pm.predictions.slice(0,40); // cap stored forecasts
+}
+
+// Check every open forecast against a freshly logged reading.
+function verifyPredictions(entry){
+  const pm=S.poolModel; let changed=false;
+  pm.predictions.forEach(p=>{
+    if(p.status!=='open'||p.param!=='chlorine')return;
+    if(entry.timestamp<=p.baselineTs||entry.chlorine==null)return; // can't check this one yet
+    const elapsed=(entry.timestamp-p.baselineTs)/864e5;
+    if(elapsed<=0)return;
+    // Chlorine added since the forecast → a decay-only forecast can't be fairly judged. Void, don't penalize.
+    if(entry.action==='Added Chlorine'||entry.action==='Shocked'||entry.chlorine>p.baselineFc+FC_TOL_MIN){
+      p.status='void';p.actual=entry.chlorine;p.verifiedAt=Date.now();p.note='chlorine added before next test — forecast not applicable';changed=true;return;
+    }
+    const expected=Math.max(0,p.baselineFc-p.rate*elapsed);
+    const tol=Math.max(FC_TOL_MIN,expected*0.25);
+    const err=entry.chlorine-expected;
+    p.actual=entry.chlorine;
+    p.expectedAtActual=+expected.toFixed(2);
+    p.error=+err.toFixed(2);
+    p.verifiedAt=Date.now();
+    p.status=Math.abs(err)<=tol?'confirmed':'missed';
+    changed=true;
+  });
+  return changed;
+}
+
+// A belief's forecast track record, derived only from verified outcomes.
+function beliefTrackRecord(id){
+  const ps=S.poolModel.predictions.filter(p=>p.basedOn&&p.basedOn.includes(id)&&(p.status==='confirmed'||p.status==='missed'));
+  return {tested:ps.length,hit:ps.filter(p=>p.status==='confirmed').length};
+}
+// Confidence nudge from track record: centered on a 70% hit-rate, weighted by sample size, bounded.
+function _confAdjFromRecord(tr){
+  if(!tr||tr.tested===0)return 0;
+  const rate=tr.hit/tr.tested, weight=Math.min(tr.tested,5)/5;
+  return Math.round(_clamp((rate-0.7)*40*weight,-20,10));
+}
+// Overall forecast scorecard for the UI.
+function predictionScore(){
+  const ps=S.poolModel.predictions||[];
+  const verified=ps.filter(p=>p.status==='confirmed'||p.status==='missed');
+  return {tested:verified.length,hit:verified.filter(p=>p.status==='confirmed').length,
+    open:ps.filter(p=>p.status==='open'),
+    lastVerified:ps.filter(p=>p.verifiedAt).sort((a,b)=>b.verifiedAt-a.verifiedAt)[0]||null};
+}
+
 function updatePoolModel(){
   const pm=S.poolModel;
   if(!pm||!pm.enabled)return;
+  normalizePoolModel();
   const {beliefs,open}=computeBeliefs();
   const prev=pm.beliefs||[];
-  beliefs.forEach(b=>{const old=prev.find(p=>p.id===b.id);b.firstObserved=(old&&old.firstObserved)?old.firstObserved:Date.now();b.updatedAt=Date.now();});
+  beliefs.forEach(b=>{
+    const old=prev.find(p=>p.id===b.id);
+    b.firstObserved=(old&&old.firstObserved)?old.firstObserved:Date.now();
+    b.updatedAt=Date.now();
+    const tr=beliefTrackRecord(b.id);          // closed-loop: verified forecasts move confidence
+    if(tr.tested>0){b.confidence=Math.round(_clamp(b.confidence+_confAdjFromRecord(tr),20,95));b.track=tr;}
+  });
   pm.beliefs=beliefs;pm.openQuestions=open;pm.updatedAt=Date.now();
   if(!pm.createdAt)pm.createdAt=Date.now();
+  generateFcPrediction();                        // make the next forecast to check
   persist();
 }
 function seedPoolModel(){
@@ -1357,14 +1761,33 @@ function seedPoolModel(){
   updatePoolModel();render();
 }
 function refreshPoolModel(){updatePoolModel();render();}
-function disablePoolModel(){if(confirm("Turn off Clarity's pool model? The learned beliefs are cleared, but your test history stays.")){S.poolModel={version:1,enabled:false,createdAt:null,updatedAt:null,beliefs:[],openQuestions:[]};persist();render();}}
+function disablePoolModel(){if(confirm("Turn off Clarity's pool model? The learned beliefs and forecasts are cleared, but your test history stays.")){S.poolModel={version:3,enabled:false,createdAt:null,updatedAt:null,beliefs:[],openQuestions:[],predictions:[],observations:[]};persist();render();}}
 
 function buildPoolModelContext(){
   const pm=S.poolModel;
-  if(!pm||!pm.enabled||!pm.beliefs.length)return'';
-  let s='\n\nWHAT CLARITY KNOWS ABOUT THIS POOL (a learned model — each belief carries a confidence %; treat anything under ~60% as tentative and say so rather than stating it as fact):';
-  pm.beliefs.forEach(b=>{s+=`\n• ${b.claim} — ${b.confidence}% confidence (from ${b.evidence})`;});
+  if(!pm)return'';
+  let s='';
+  if(pm.enabled&&pm.beliefs.length){
+  s+='\n\nWHAT CLARITY KNOWS ABOUT THIS POOL (a learned model — each belief carries a confidence %; treat anything under ~60% as tentative and say so rather than stating it as fact):';
+  pm.beliefs.forEach(b=>{
+    let line=`\n• ${b.claim} — ${b.confidence}% confidence (from ${b.evidence}`;
+    if(b.track&&b.track.tested)line+=`; forecast track record ${b.track.hit}/${b.track.tested} correct`;
+    s+=line+')';
+  });
   if(pm.openQuestions.length)s+='\nStill learning (do NOT guess about these): '+pm.openQuestions.join('; ')+'.';
+  // Phase 2 forecasts — deterministic; never invent, alter, or pre-confirm them.
+  const preds=pm.predictions||[];
+  const openP=preds.find(p=>p.status==='open'&&p.param==='chlorine');
+  const verified=preds.filter(p=>p.status==='confirmed'||p.status==='missed');
+  if(openP)s+=`\nOPEN FORECAST (computed by Clarity's deterministic math from the learned decay rate — restate it if useful, but do NOT claim it has come true; it is only checked when the next reading is logged): ${openP.claim} (predicted ${openP.predicted} ppm by ${new Date(openP.dueBy).toLocaleDateString()}).`;
+  if(verified.length){
+    const hit=verified.filter(p=>p.status==='confirmed').length;
+    s+=`\nFORECAST TRACK RECORD: ${hit} of ${verified.length} past chlorine forecasts held within tolerance. Report this honestly; do not overstate the model's accuracy.`;
+  }
+  }
+  if(pm.observations&&pm.observations.length){
+    s+='\n\nOWNER-CONFIRMED FACTS (the owner explicitly confirmed these; treat them as true context. They are stated facts, not measured patterns — do not attach a derived confidence % to them):\n'+pm.observations.map(o=>'• '+o.text).join('\n');
+  }
   return s;
 }
 
@@ -1402,9 +1825,44 @@ function renderPoolModelCard(){
     });
   }
 
+  // Phase 2: forecasts — the closed loop made visible.
+  if(pm.beliefs.length){
+    const sc=predictionScore();
+    if(sc.tested||sc.open.length||(!_fcDecayRate())){
+      html+=`<div class="mono" style="font-size:8.5px;color:var(--mut2);letter-spacing:1px;text-transform:uppercase;margin:12px 0 6px;padding-top:10px;border-top:1px solid var(--line)">Forecasts</div>`;
+    }
+    if(sc.tested){
+      const pct=Math.round(sc.hit/sc.tested*100), col=_confColor(pct);
+      html+=`<div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
+          <span style="font-size:12.5px;color:var(--txt)">🎯 Forecasts that held</span>
+          <span class="mono" style="font-size:10px;color:${col};white-space:nowrap">${sc.hit}/${sc.tested} · ${pct}%</span>
+        </div>
+        <div style="height:4px;background:rgba(255,255,255,.06);border-radius:3px;margin:5px 0 3px;overflow:hidden">
+          <div style="height:100%;width:${pct}%;background:${col};border-radius:3px"></div>
+        </div>`;
+    }
+    const lv=sc.lastVerified;
+    if(lv&&lv.status==='confirmed')html+=`<div style="font-size:11px;color:var(--green);margin-top:6px;line-height:1.4">✓ Last forecast held — FC came in at ${lv.actual} ppm (expected ~${lv.expectedAtActual}).</div>`;
+    else if(lv&&lv.status==='missed')html+=`<div style="font-size:11px;color:#f0c040;margin-top:6px;line-height:1.4">✗ Last forecast was off by ${Math.abs(lv.error)} ppm (got ${lv.actual}, expected ~${lv.expectedAtActual}) — confidence adjusted.</div>`;
+    else if(lv&&lv.status==='void')html+=`<div style="font-size:11px;color:var(--mut2);margin-top:6px;line-height:1.4">↩ Last forecast set aside — chlorine was added before the next test, so it couldn't be fairly checked.</div>`;
+    if(sc.open.length){
+      const p=sc.open[0];
+      html+=`<div style="font-size:11.5px;color:var(--aqua);margin-top:8px;line-height:1.45">🔮 ${p.claim}.${p.daysToMin?` At this rate FC reaches the ${IDEAL.chlorine.min} ppm minimum in ~${Math.round(p.daysToMin)} day${Math.round(p.daysToMin)===1?'':'s'}.`:''}</div>
+        <div style="font-size:9px;color:var(--mut2);margin-top:2px">A forecast Clarity will check against your next test.</div>`;
+    }else if(!_fcDecayRate()){
+      html+=`<div style="font-size:11px;color:var(--mut2);margin-top:2px;line-height:1.4">No chlorine forecast yet — I need a couple of tests with no chlorine added in between before I can predict how fast it fades.</div>`;
+    }
+  }
+
   if(pm.openQuestions&&pm.openQuestions.length){
     html+=`<div class="mono" style="font-size:8.5px;color:var(--mut2);letter-spacing:1px;text-transform:uppercase;margin:10px 0 6px">Still learning</div>`;
     pm.openQuestions.slice(0,5).forEach(q=>{html+=`<div style="font-size:11px;color:var(--mut2);margin-bottom:3px;line-height:1.4">• ${q}</div>`;});
+  }
+
+  if(pm.observations&&pm.observations.length){
+    html+=`<div class="mono" style="font-size:8.5px;color:var(--mut2);letter-spacing:1px;text-transform:uppercase;margin:12px 0 6px;padding-top:10px;border-top:1px solid var(--line)">You've told me</div>`;
+    pm.observations.slice(0,6).forEach(o=>{html+=`<div style="font-size:11.5px;color:var(--txt);margin-bottom:3px;line-height:1.4">• ${esc(o.text)}</div>`;});
+    html+=`<div style="font-size:9px;color:var(--mut2);margin-top:2px">Facts you confirmed — kept separate from what Clarity measured.</div>`;
   }
 
   html+=`<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:9px;border-top:1px solid var(--line)">
@@ -1532,6 +1990,16 @@ STRUCTURED OUTPUT: Whenever the photo is a test strip/card, append a hidden data
 <!--READINGS:{"chlorine":X,"totalChlorine":X,"ph":X,"alkalinity":X,"hardness":X,"cyanuric":X,"confidence":{"chlorine":N,"totalChlorine":N,"ph":N,"alkalinity":N,"hardness":N,"cyanuric":N}}-->
 Always give a numeric best estimate for every pad you can see at all (use the single best number, e.g. "between 1 and 3, closer to 3" -> 3) and set its confidence honestly. Use null for a value ONLY if that one pad is truly impossible to judge (and set its confidence to 0). Include this block for ANY strip/card photo. Do NOT include it for general questions or non-strip photos.
 
+ACTIONS YOU CAN DO FOR THE OWNER (the agent layer). You can do the bookkeeping instead of just telling the owner to. You NEVER perform an action directly and you NEVER claim something is saved — you PROPOSE actions and the app shows the owner a ✓/✗ confirm chip; only their tap saves it. Propose an action ONLY when the owner clearly wants it (they asked, or they just told you something concrete worth recording) — never speculatively, and never invent details they didn't give. Available tools:
+- record_action — log a treatment/dose on their history. args: {"action": one of "Added Chlorine"|"Shocked"|"pH Up"|"pH Down"|"Added Alkalinity"|"Backwashed"|"Brushed"|"Added CYA", "amount": "2 lbs cal-hypo" (optional), "note": "" (optional)}. Use after they tell you they added/did something, or to log a dose you recommended and they agreed to.
+- set_reminder — a dated reminder. args: {"title": "Test water again", "inDays": 3}.
+- update_schedule — add a recurring maintenance task. args: {"title": "Brush walls", "int": 7 (days between)}.
+- update_profile — save a durable pool fact. args either {"field": one of "type"|"surface"|"filter"|"climate"|"sun"|"water"|"usage"|"equipment", "value": "..."} or {"note": "free-text fact"}.
+- record_belief — note a qualitative fact the OWNER stated about their pool (e.g. "pump runs 8 hrs/day", "kids swim daily in summer"). args: {"observation": "..."}. This is stored as an owner-confirmed fact, separate from your measured beliefs — do not use it to assert a pattern you only suspect.
+When (and only when) you want to propose one or more actions, append a hidden block at the VERY END of your reply, on its own line, after any READINGS block:
+<!--ACTIONS:[{"tool":"record_action","args":{"action":"Shocked","amount":"2 lbs"},"label":"Shocked · 2 lbs cal-hypo"}]-->
+Rules: max 4 actions; always include a short human "label"; only tools listed above; omit the block entirely when no action is warranted. In your visible text, briefly say what you'll log (e.g. "I can log that shock for you — confirm below."), never that it's already done.
+
 Today is ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}.`;
 
 const MAX_HISTORY_MSGS=10;
@@ -1658,12 +2126,13 @@ async function sendMessage(text){
     const profileCtx=buildProfileContext();
     const insightsCtx=buildInsightsContext();
     const modelCtx=buildPoolModelContext();
+    const weatherCtx=buildWeatherContext();
     const notesCtx=S.poolNotes?`\n\nPOOL NOTES (owner's description of their pool situation — factor this into every answer):\n${S.poolNotes}`:'';
     // Use Haiku for strip/image analysis (fast), Opus for reasoning/learning (chat)
     const hasImage=api.some(m=>Array.isArray(m.content)&&m.content.some(c=>c.type==='image'));
     const model=hasImage?STRIP_MODEL:CHAT_MODEL;
     const reply=await callClaude({model,max_tokens:2000,
-      system:systemPrompt+`\nUser's pool: inground, ~${S.gallons.toLocaleString()} gallons.`+profileCtx+notesCtx+modelCtx+insightsCtx+historyCtx,messages:api});
+      system:systemPrompt+`\nUser's pool: inground, ~${S.gallons.toLocaleString()} gallons.`+profileCtx+notesCtx+weatherCtx+modelCtx+insightsCtx+historyCtx,messages:api});
     S.messages.push({role:'assistant',content:reply});
   }catch(e){S.messages.push({role:'assistant',content:`⚠ ${e.message}`});}
   S.thinking=false;render();
@@ -1758,6 +2227,7 @@ fbAuth.onAuthStateChanged(async user=>{
     _authGate.style.display='none';
     await cloudHydrate();
     render();
+    fetchWeather(); // Phase 4: pull the local forecast once signed in (self-guards if no location)
   }else{
     _uid=null;
     _authGate.style.display='flex';
