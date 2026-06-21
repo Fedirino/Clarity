@@ -235,7 +235,7 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v3.1.5</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v3.1.6</span></div>
   </div>
 </div>
 
@@ -412,7 +412,7 @@ function renderSetup(){
       <textarea id="poolNotesInput" style="width:100%;min-height:70px;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:11px;padding:10px 12px;color:var(--txt);font-size:13px;font-family:inherit;resize:vertical;line-height:1.5" placeholder="Anything else Clarity should know — e.g. 'has a slow leak', 'recently replastered', 'lots of trees nearby'…">${esc(S.poolNotes)}</textarea>
       <div class="hint">These notes are sent to Clarity with every message so it understands your pool's ongoing situation.</div></div>
 
-      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v3.1.5</div>
+      <div style="margin-top:12px;font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v3.1.6</div>
     </div>`;
 
   // Gallon chips
@@ -1078,7 +1078,7 @@ function logReading(read){
 
 /* ── API ── */
 const CHAT_MODEL='claude-opus-4-6'; // Reasoning, patterns, learning
-const STRIP_MODEL='claude-haiku-4-5-20251001'; // Fast image analysis
+const STRIP_MODEL='claude-opus-4-6'; // Strip scanning — strongest vision (was Haiku; Haiku could not reliably read pale pads in the card channel)
 
 function buildInsightsContext(){
   if(S.history.length<3)return'';

@@ -4,6 +4,27 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [3.1.6] — 2026-06-20
+
+### Route Strip Scans to a Stronger Vision Model — Patch
+
+**Overview**: After five prompt revisions failed to make scanning reliable — while Opus read the very same daylight photo correctly in conversation — the pipeline, not the prompt, became the prime suspect. The app routed every strip scan to `STRIP_MODEL`, which was Claude Haiku (chosen originally for speed). Haiku is the weakest of the three models at vision, and the symptoms throughout (declaring the channel empty, balking at pale pads, capitulating to "the strip is there" with invented readings) are exactly what an under-powered vision model produces on a hard image: faint pads in a channel against a white card, requiring subtle color-matching. The chat path already used Opus and had no trouble reading photos; only the scan path was handicapped.
+
+### Changed
+- **`STRIP_MODEL` switched from `claude-haiku-4-5-20251001` to `claude-opus-4-6`** — the strongest available vision model, and specifically the one observed reading the failing photo correctly. This is a one-line change; the serverless proxy already permitted all three models, and the shared system prompt and READINGS parsing are model-agnostic, so no other code changed.
+
+### Rationale
+- This is a diagnostic test as much as a fix: using the model already proven to read the photo makes the outcome conclusive. If scans now succeed, the five-round "it won't scan" saga was a model-capability problem, and the current prompt (already substantially improved through v3.1.5) is fine as-is. If a clean photo still fails with Opus, the cause lies elsewhere and the prompt will be reworked from scratch with far better information.
+- Cost is not a concern for this single-user personal tool, so Opus is acceptable for scanning. Once accuracy is confirmed, `STRIP_MODEL` can optionally be stepped down to `claude-sonnet-4-6` for faster scans while retaining strong vision.
+
+### Note
+- An earlier project assumption held that switching the scan model would require rewriting the serverless function, system prompt, and output parsing. That is not true of the code as it stands — the change is a single constant. The assumption is superseded.
+
+### Version
+- Bumped 3.1.5 → 3.1.6 (footer tag + settings panel).
+
+---
+
 ## [3.1.5] — 2026-06-20
 
 ### Always-Read + Confidence Percentage — Minor Release
