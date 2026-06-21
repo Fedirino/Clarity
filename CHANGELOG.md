@@ -4,6 +4,26 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [4.1.1] — 2026-06-21
+
+### Fix — Location lookup (ZIP codes + "City, State") — Patch Release
+
+**Overview**: The v4.1.0 weather location field used Open-Meteo's geocoder for everything, which silently mishandled the two most common inputs. A US **ZIP code** like `06450` matched a *Spanish* postal code (Quintana de la Serena) instead of Meriden, CT, and a **"City, State"** string like `Meriden Connecticut` returned no match at all (Open-Meteo only accepts a bare city name). Location now resolves correctly for ZIPs and city/state input.
+
+### Fixed
+- **US ZIP codes** now resolve via Zippopotam (`api.zippopotam.us`, free, no key, CORS-enabled): a 5-digit entry is looked up directly, so `06450` → Meriden, CT.
+- **"City, State" / "City State"** input is now parsed: Clarity searches the city name alone, fetches up to 10 candidates, and disambiguates by the state/region you typed (full name or 2-letter abbreviation, with or without a comma). `Meriden Connecticut`, `Meriden, CT`, and `Meriden, Connecticut` all resolve to Meriden, CT — instead of failing or grabbing the wrong same-named town.
+- Plain city names still work and pick the highest-population match (e.g. `Meriden` → Meriden, CT).
+
+### Truthfulness Notes
+- Still no fabrication: if neither the ZIP nor the city/state resolves, Clarity shows an honest "couldn't find that location" message rather than guessing a place.
+- Verified against the live geocoding APIs (real responses for `06450`, `Meriden Connecticut`, and `Meriden`) before shipping.
+
+### Version
+- Bumped 4.1.0 → 4.1.1 (location fix). Both in-app version strings updated.
+
+---
+
 ## [4.1.0] — 2026-06-21
 
 ### Phase 4 (start) — Weather-Aware Alerts — Minor Release

@@ -235,7 +235,7 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v4.1.0</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v4.1.1</span></div>
   </div>
 </div>
 
@@ -488,7 +488,7 @@ function renderSetup(){
 
       <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
         <button onclick="fbAuth.signOut()" style="background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--mut);font-size:11px;font-family:inherit;padding:7px 14px;border-radius:9px;cursor:pointer">Sign out</button>
-        <span style="font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v4.1.0</span>
+        <span style="font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v4.1.1</span>
       </div>
     </div>`;
 
@@ -1305,13 +1305,50 @@ function esc(s){return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replac
 const WX={tmaxHot:90,tmaxScorcher:100,uvHigh:8,uvExtreme:10,rainIn:0.3,rainProb:70};
 let _wxFetching=false;
 
-async function geocodeLocation(q){
-  const r=await fetch('https://geocoding-api.open-meteo.com/v1/search?count=1&language=en&format=json&name='+encodeURIComponent(q));
-  if(!r.ok)throw new Error('geocode http '+r.status);
+const US_STATES={al:'alabama',ak:'alaska',az:'arizona',ar:'arkansas',ca:'california',co:'colorado',ct:'connecticut',de:'delaware',fl:'florida',ga:'georgia',hi:'hawaii',id:'idaho',il:'illinois',in:'indiana',ia:'iowa',ks:'kansas',ky:'kentucky',la:'louisiana',me:'maine',md:'maryland',ma:'massachusetts',mi:'michigan',mn:'minnesota',ms:'mississippi',mo:'missouri',mt:'montana',ne:'nebraska',nv:'nevada',nh:'new hampshire',nj:'new jersey',nm:'new mexico',ny:'new york',nc:'north carolina',nd:'north dakota',oh:'ohio',ok:'oklahoma',or:'oregon',pa:'pennsylvania',ri:'rhode island',sc:'south carolina',sd:'south dakota',tn:'tennessee',tx:'texas',ut:'utah',vt:'vermont',va:'virginia',wa:'washington',wv:'west virginia',wi:'wisconsin',wy:'wyoming',dc:'district of columbia'};
+
+async function omGeocode(name){
+  const r=await fetch('https://geocoding-api.open-meteo.com/v1/search?count=10&language=en&format=json&name='+encodeURIComponent(name));
+  if(!r.ok)return [];
   const d=await r.json();
-  if(!d.results||!d.results.length)throw new Error('not found');
-  const g=d.results[0];
-  return {lat:g.latitude,lon:g.longitude,label:[g.name,g.admin1,g.country_code].filter(Boolean).join(', ')};
+  return d.results||[];
+}
+
+// Resolve a free-text location to lat/lon. Handles US ZIPs (Open-Meteo can't — "06450"
+// wrongly matched a Spanish postal code) and "City, State" / "City State" (Open-Meteo
+// returns nothing for a combined string), by ZIP-lookup via Zippopotam and by searching
+// the city alone then filtering the matches by the state/region the owner typed.
+async function geocodeLocation(q){
+  q=(q||'').trim();
+  if(!q)throw new Error('empty');
+  // US 5-digit ZIP → Zippopotam (CORS-enabled, no key)
+  if(/^\d{5}$/.test(q)){
+    const r=await fetch('https://api.zippopotam.us/us/'+q);
+    if(!r.ok)throw new Error('zip not found');
+    const d=await r.json();
+    const p=d.places&&d.places[0];
+    if(!p)throw new Error('zip not found');
+    return {lat:+p.latitude,lon:+p.longitude,label:`${p['place name']}, ${p['state abbreviation']} ${q}`};
+  }
+  // City name, optionally with a state/region (with or without a comma).
+  let city=q, region='';
+  if(q.includes(',')){const parts=q.split(',');city=parts[0].trim();region=parts.slice(1).join(' ').trim();}
+  let results=await omGeocode(city);
+  if(!results.length&&!region){           // e.g. "Meriden Connecticut" — peel the trailing state and retry
+    const toks=q.split(/\s+/);
+    if(toks.length>1){region=toks[toks.length-1];city=toks.slice(0,-1).join(' ');results=await omGeocode(city);}
+  }
+  if(!results.length)throw new Error('not found');
+  let pick=results[0];
+  if(region){                              // disambiguate among same-named places by the state/region typed
+    const rl=region.toLowerCase().replace(/\./g,''), full=US_STATES[rl]||rl;
+    const m=results.find(r=>{
+      const a=(r.admin1||'').toLowerCase(), cc=(r.country_code||'').toLowerCase(), cn=(r.country||'').toLowerCase();
+      return a===full||a.includes(full)||cc===rl||cn===full||cn.includes(rl);
+    });
+    if(m)pick=m;
+  }
+  return {lat:pick.latitude,lon:pick.longitude,label:[pick.name,pick.admin1,pick.country_code].filter(Boolean).join(', ')};
 }
 
 async function setPoolLocation(q){
