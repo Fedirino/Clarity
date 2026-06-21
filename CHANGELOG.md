@@ -4,6 +4,41 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [3.5.0] — 2026-06-21
+
+### Phase 1 — The Pool Model + Chlorine-Decay Bug Fix — Minor Release
+
+**Overview**: Clarity stops being a stateless advisor and starts keeping a living, confidence-rated model of *your* pool. It learns how fast your chlorine fades, how your pH drifts, your testing rhythm, and which parameters chronically run out of range — and it shows you each belief with an explicit confidence percentage and the evidence behind it. Nothing is invented: every belief is computed deterministically from your own test history, confidence is capped below 100% on purpose (there's always room for the unknown), and what Clarity *doesn't* yet know is listed plainly under "Still learning." This model is now fed into every chat so Clarity reasons from what it actually knows about your pool, with instructions to treat low-confidence beliefs as tentative.
+
+While building this, a latent accuracy bug surfaced and was fixed (see below) — the chlorine-decay calculation had never actually been running.
+
+### Added
+- **Pool Model (`S.poolModel`)**: a persistent, versioned structure holding beliefs (with confidence %, evidence, and detail) and open questions. Syncs to Firestore and localStorage alongside the rest of your data.
+- **Belief engine (`computeBeliefs` / `updatePoolModel`)**: deterministic math that derives four kinds of belief —
+  - *Chlorine decay* (ppm/day, from chlorine-free intervals, with spread + consistency)
+  - *pH behavior* (rising/falling/steady, per-week rate, with direction consistency)
+  - *Testing rhythm* (average days between tests, with regularity)
+  - *Recurring patterns* (parameters that chronically run high or low)
+- **"What Clarity Knows" dashboard card**: shows each belief with a confidence bar (green ≥70%, amber 45–69%, grey <45%), the evidence behind it, a "Still learning" section, and last-updated time. Includes a one-tap **Build my pool model** button (opt-in) and **Refresh** / **turn off** controls.
+- **Confidence-aware Claude context (`buildPoolModelContext`)**: the model is injected into every chat with explicit instructions to treat anything under ~60% as tentative and never guess about open questions.
+
+### Changed
+- **Opt-in by design**: the model stays empty until you tap "Build my pool model" (requires ≥3 tests). Once enabled, it refreshes automatically before every chat message so Clarity always reasons from current beliefs.
+- Chat context now includes the Pool Model ahead of the raw insights and history.
+
+### Fixed
+- **Chlorine-decay calculation never ran (latent bug).** Because history is stored newest-first, the elapsed-time delta was computed with the wrong sign (`prev − cur`), making it always negative and silently rejected by the `days > 0` guard. Free-chlorine decay — arguably the most important pattern for a pool — was therefore never computed in the dashboard insights or the chat context. Fixed in all three code paths (dashboard insights, chat insights, and the new Pool Model), and tightened the guard to skip intervals where chlorine was added at *either* endpoint (not just the older one), so additions can't mask the true decay rate.
+
+### Truthfulness Notes
+- Beliefs appear only when real evidence supports them (e.g. 2+ chlorine-free intervals, 3+ pH readings); otherwise the topic is listed under "Still learning" rather than guessed.
+- Confidence is derived from evidence count + consistency/regularity and is **capped at 90–95%** — Clarity never claims certainty.
+- The model is fully inspectable: every belief shows its evidence and the data it's drawn from.
+
+### Version
+- Bumped 3.2.0 → 3.5.0 (Phase 1 complete).
+
+---
+
 ## [3.2.0] — 2026-06-20
 
 ### Move to Firebase + Cloud Sync & Sign-In — Minor Release

@@ -235,7 +235,7 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v3.5.0</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v3.2.0</span></div>
   </div>
 </div>
 
@@ -361,7 +361,6 @@ let S={
     type:null, surface:null, filter:null, climate:null,
     sun:null, water:null, usage:null, equipment:[]
   },
-  poolModel: store.get('poolModel')||{version:1,enabled:false,createdAt:null,updatedAt:null,beliefs:[],openQuestions:[]},
   messages:[{role:'assistant',content:"Hi! I'm Clarity, your personal pool co-pilot.\n\nI learn your pool's patterns over time and give advice specific to YOUR pool — not generic tips.\n\n**First time?** Tap ⚙ to set up your pool profile so I can give you personalized advice from day one.\n\n📷 To scan, dip the strip, then slide it into the channel on the LEFT EDGE of the AquaChek reference card and photograph the whole card in even, indirect light (no flash). Reading the strip against the card's swatches in the same shot is how I stay accurate. I can also look at algae, cloudy water, or equipment. If a pad is unclear I'll say so rather than guess."}],
   tab:'dash', thinking:false, setupOpen:false, editTask:null,
   _pendingImage:null,
@@ -381,12 +380,12 @@ function defaultTasks(){
 /* ── Persistence: localStorage cache + Firestore cloud sync ── */
 let _uid=null, _pushT=null;
 function cloudDoc(){return _uid?fbDb.collection('clarity').doc(_uid):null;}
-function persistLocal(){store.set('gallons',S.gallons);store.set('history',S.history);store.set('tasks',S.tasks);store.set('poolNotes',S.poolNotes);store.set('poolProfile',S.poolProfile);store.set('poolModel',S.poolModel);}
+function persistLocal(){store.set('gallons',S.gallons);store.set('history',S.history);store.set('tasks',S.tasks);store.set('poolNotes',S.poolNotes);store.set('poolProfile',S.poolProfile);}
 function cloudPush(){
   const doc=cloudDoc();if(!doc)return;
   clearTimeout(_pushT);
   _pushT=setTimeout(()=>{
-    doc.set({gallons:S.gallons,history:S.history,tasks:S.tasks,poolNotes:S.poolNotes,poolProfile:S.poolProfile,poolModel:S.poolModel,updatedAt:Date.now()},{merge:true})
+    doc.set({gallons:S.gallons,history:S.history,tasks:S.tasks,poolNotes:S.poolNotes,poolProfile:S.poolProfile,updatedAt:Date.now()},{merge:true})
       .catch(e=>console.warn('Cloud sync (push) failed:',e.message));
   },800);
 }
@@ -402,7 +401,6 @@ async function cloudHydrate(){
       if(Array.isArray(d.tasks))S.tasks=d.tasks;
       if(typeof d.poolNotes==='string')S.poolNotes=d.poolNotes;
       if(d.poolProfile)S.poolProfile=d.poolProfile;
-      if(d.poolModel)S.poolModel=d.poolModel;
       persistLocal();
     }else{
       // First sign-in on this account → seed the cloud with current local state.
@@ -483,7 +481,7 @@ function renderSetup(){
 
       <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
         <button onclick="fbAuth.signOut()" style="background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--mut);font-size:11px;font-family:inherit;padding:7px 14px;border-radius:9px;cursor:pointer">Sign out</button>
-        <span style="font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v3.5.0</span>
+        <span style="font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v3.2.0</span>
       </div>
     </div>`;
 
@@ -670,9 +668,6 @@ function renderDash(b){
     <button class="chip on" onclick="S.tab='chat';render()">Test now →</button>
   </div>`;
 
-  // What Clarity Knows (Pool Model)
-  html+=renderPoolModelCard();
-
   if(hasData){
     // Current readings
     html+=`<div class="mono" style="font-size:9px;color:var(--mut2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;margin-top:16px">Current Readings</div>`;
@@ -733,8 +728,8 @@ function renderDash(b){
       const fcP=[];
       for(let i=0;i<S.history.length-1;i++){
         const cur=S.history[i],prev=S.history[i+1];
-        if(cur.chlorine!=null&&prev.chlorine!=null&&cur.action!=='Added Chlorine'&&cur.action!=='Shocked'&&prev.action!=='Added Chlorine'&&prev.action!=='Shocked'){
-          const days=(cur.timestamp-prev.timestamp)/864e5;
+        if(cur.chlorine!=null&&prev.chlorine!=null&&prev.action!=='Added Chlorine'&&prev.action!=='Shocked'){
+          const days=(prev.timestamp-cur.timestamp)/864e5;
           if(days>0&&days<14)fcP.push((prev.chlorine-cur.chlorine)/days);
         }
       }
@@ -1164,8 +1159,8 @@ function buildInsightsContext(){
   const fcPairs=[];
   for(let i=0;i<h.length-1;i++){
     const cur=h[i],prev=h[i+1];
-    if(cur.chlorine!=null&&prev.chlorine!=null&&cur.action!=='Added Chlorine'&&cur.action!=='Shocked'&&prev.action!=='Added Chlorine'&&prev.action!=='Shocked'){
-      const days=(cur.timestamp-prev.timestamp)/864e5;
+    if(cur.chlorine!=null&&prev.chlorine!=null&&prev.action!=='Added Chlorine'&&prev.action!=='Shocked'){
+      const days=(prev.timestamp-cur.timestamp)/864e5;
       if(days>0&&days<14){
         const rate=(prev.chlorine-cur.chlorine)/days;
         fcPairs.push(rate);
@@ -1246,172 +1241,6 @@ function buildInsightsContext(){
   if(problem.length)insights.push(`Currently out of range: ${problem.map(k=>IDEAL[k].short+' ('+statusOf(latest[k],k)+')').join(', ')}`);
 
   return'\n\nPOOL INSIGHTS (computed from history — use these to give specific, data-driven advice):\n'+insights.map(i=>'• '+i).join('\n');
-}
-
-/* ── Pool Model (Phase 1): persistent, confidence-rated beliefs about THIS pool.
-   Every belief is derived from actual history — never invented. Confidence is
-   capped below 100% on purpose: there is always room for the unknown. ── */
-function _stdev(a){if(a.length<2)return 0;const m=a.reduce((x,y)=>x+y,0)/a.length;return Math.sqrt(a.reduce((s,x)=>s+(x-m)*(x-m),0)/a.length);}
-function _clamp(v,lo,hi){return Math.max(lo,Math.min(hi,v));}
-function _timeAgo(ts){if(!ts)return'';const s=(Date.now()-ts)/1000;if(s<60)return'just now';const m=s/60;if(m<60)return Math.round(m)+'m ago';const h=m/60;if(h<24)return Math.round(h)+'h ago';return Math.round(h/24)+'d ago';}
-function _confColor(c){return c>=70?'var(--green)':c>=45?'#f0c040':'var(--mut2)';}
-
-function computeBeliefs(){
-  const h=S.history, beliefs=[], open=[], day=864e5;
-
-  // FC decay — only chlorine-free intervals
-  const fcRates=[];
-  for(let i=0;i<h.length-1;i++){
-    const cur=h[i],prev=h[i+1];
-    if(cur.chlorine!=null&&prev.chlorine!=null&&cur.action!=='Added Chlorine'&&cur.action!=='Shocked'&&prev.action!=='Added Chlorine'&&prev.action!=='Shocked'){
-      const days=(cur.timestamp-prev.timestamp)/day;
-      if(days>0&&days<14)fcRates.push((prev.chlorine-cur.chlorine)/days);
-    }
-  }
-  if(fcRates.length>=2){
-    const mean=fcRates.reduce((a,b)=>a+b,0)/fcRates.length, val=Math.abs(mean);
-    const sd=_stdev(fcRates), consistency=val>0?_clamp(1-sd/val,0,1):0;
-    const conf=Math.round(_clamp(30+fcRates.length*10+consistency*30,30,95));
-    const lo=Math.abs(Math.min(...fcRates)).toFixed(2), hi=Math.abs(Math.max(...fcRates)).toFixed(2);
-    beliefs.push({id:'fc-decay',icon:'📉',label:'Chlorine decay',
-      claim:`Free chlorine drops about ${val.toFixed(2)} ppm/day`,
-      confidence:conf,evidence:`${fcRates.length} chlorine-free intervals`,
-      detail:`spread ${lo}–${hi} ppm/day · consistency ${Math.round(consistency*100)}%`});
-  }else{
-    open.push('Chlorine decay — need 2+ tests with no chlorine added in between');
-  }
-
-  // pH behavior
-  const phV=h.filter(e=>e.ph!=null).slice(0,12);
-  if(phV.length>=3){
-    const diffs=[];
-    for(let i=0;i<phV.length-1;i++)diffs.push(phV[i].ph-phV[i+1].ph); // newer minus older
-    const meanD=diffs.reduce((a,b)=>a+b,0)/diffs.length, dir=Math.sign(meanD);
-    const dirConsistency=dir===0?0:diffs.filter(d=>Math.sign(d)===dir).length/diffs.length;
-    const spanDays=Math.max((phV[0].timestamp-phV[phV.length-1].timestamp)/day,1);
-    const perWeek=Math.abs((phV[0].ph-phV[phV.length-1].ph)/spanDays*7);
-    const conf=Math.round(_clamp(25+phV.length*7+dirConsistency*25,25,90));
-    const net=phV[0].ph-phV[phV.length-1].ph;
-    const claim=Math.abs(net)<0.15
-      ?`pH stays steady around ${phV[0].ph.toFixed(1)}`
-      :`pH tends to ${net>0?'rise':'fall'} ~${perWeek.toFixed(2)}/week`;
-    beliefs.push({id:'ph-drift',icon:Math.abs(net)<0.15?'➡️':(net>0?'📈':'📉'),label:'pH behavior',
-      claim,confidence:conf,evidence:`${phV.length} pH readings`,
-      detail:`direction consistency ${Math.round(dirConsistency*100)}%`});
-  }else{
-    open.push('pH behavior — only '+phV.length+' pH reading'+(phV.length===1?'':'s')+' so far (need 3+)');
-  }
-
-  // Testing rhythm
-  if(h.length>=4){
-    const gaps=[];
-    for(let i=0;i<Math.min(h.length-1,12);i++)gaps.push((h[i].timestamp-h[i+1].timestamp)/day);
-    const mean=gaps.reduce((a,b)=>a+b,0)/gaps.length, sd=_stdev(gaps);
-    const regularity=mean>0?_clamp(1-sd/mean,0,1):0;
-    const conf=Math.round(_clamp(40+gaps.length*5+regularity*20,40,92));
-    beliefs.push({id:'test-cadence',icon:'🗓️',label:'Testing rhythm',
-      claim:`You test about every ${mean.toFixed(1)} days`,
-      confidence:conf,evidence:`${gaps.length} intervals`,
-      detail:`regularity ${Math.round(regularity*100)}%`});
-  }
-
-  // Recurring out-of-range patterns
-  const win=h.slice(0,15);
-  KEYS.forEach(k=>{
-    const measured=win.filter(e=>e[k]!=null);
-    if(measured.length>=4){
-      const offs=measured.filter(e=>statusOf(e[k],k)!=='OK');
-      const lows=measured.filter(e=>statusOf(e[k],k)==='LOW').length;
-      const highs=measured.filter(e=>statusOf(e[k],k)==='HIGH').length;
-      const frac=offs.length/measured.length;
-      if(offs.length>=3&&frac>=0.5){
-        const dirn=lows>=highs?'low':'high';
-        const conf=Math.round(_clamp(35+offs.length*8+frac*25,35,90));
-        beliefs.push({id:'recurring-'+k,icon:'🔁',label:'Recurring pattern',
-          claim:`${IDEAL[k].label} often runs ${dirn}`,
-          confidence:conf,evidence:`${offs.length} of ${measured.length} recent tests`,
-          detail:`target ${IDEAL[k].min}–${IDEAL[k].max}${IDEAL[k].unit?' '+IDEAL[k].unit:''}`});
-      }
-    }else if(measured.length>0&&measured.length<3){
-      open.push(IDEAL[k].label+' — only '+measured.length+' reading'+(measured.length===1?'':'s'));
-    }
-  });
-
-  return {beliefs,open};
-}
-
-function updatePoolModel(){
-  const pm=S.poolModel;
-  if(!pm||!pm.enabled)return;
-  const {beliefs,open}=computeBeliefs();
-  const prev=pm.beliefs||[];
-  beliefs.forEach(b=>{const old=prev.find(p=>p.id===b.id);b.firstObserved=(old&&old.firstObserved)?old.firstObserved:Date.now();b.updatedAt=Date.now();});
-  pm.beliefs=beliefs;pm.openQuestions=open;pm.updatedAt=Date.now();
-  if(!pm.createdAt)pm.createdAt=Date.now();
-  persist();
-}
-function seedPoolModel(){
-  if(S.history.length<3){alert('Log at least 3 tests first — Clarity needs a little history before it can learn anything truthfully.');return;}
-  S.poolModel.enabled=true;
-  if(!S.poolModel.createdAt)S.poolModel.createdAt=Date.now();
-  updatePoolModel();render();
-}
-function refreshPoolModel(){updatePoolModel();render();}
-function disablePoolModel(){if(confirm("Turn off Clarity's pool model? The learned beliefs are cleared, but your test history stays.")){S.poolModel={version:1,enabled:false,createdAt:null,updatedAt:null,beliefs:[],openQuestions:[]};persist();render();}}
-
-function buildPoolModelContext(){
-  const pm=S.poolModel;
-  if(!pm||!pm.enabled||!pm.beliefs.length)return'';
-  let s='\n\nWHAT CLARITY KNOWS ABOUT THIS POOL (a learned model — each belief carries a confidence %; treat anything under ~60% as tentative and say so rather than stating it as fact):';
-  pm.beliefs.forEach(b=>{s+=`\n• ${b.claim} — ${b.confidence}% confidence (from ${b.evidence})`;});
-  if(pm.openQuestions.length)s+='\nStill learning (do NOT guess about these): '+pm.openQuestions.join('; ')+'.';
-  return s;
-}
-
-function renderPoolModelCard(){
-  const pm=S.poolModel;
-  let html=`<div class="formcard" style="padding:14px 16px;margin-bottom:12px">`;
-  html+=`<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-    <div class="mono" style="font-size:9px;color:var(--aqua);letter-spacing:1.5px;text-transform:uppercase">What Clarity Knows</div>`;
-  if(pm.enabled&&pm.beliefs.length)html+=`<button class="chip" onclick="refreshPoolModel()" style="font-size:10px;padding:3px 9px">↻ Refresh</button>`;
-  html+=`</div>`;
-
-  if(!pm.enabled){
-    const ready=S.history.length>=3;
-    html+=`<div style="font-size:12px;color:var(--mut);line-height:1.5;margin-bottom:10px">Clarity can build a model of <em>your</em> pool — how fast chlorine fades, how pH drifts, your testing rhythm — each with a confidence level so you always know how sure it is. Nothing is invented; it's all from your own test history.</div>`;
-    if(ready)html+=`<button class="chip on" onclick="seedPoolModel()" style="font-size:12px;padding:7px 14px">✨ Build my pool model</button>`;
-    else html+=`<div style="font-size:11px;color:var(--mut2)">Log ${3-S.history.length} more test${3-S.history.length===1?'':'s'} and this unlocks.</div>`;
-    html+=`</div>`;return html;
-  }
-
-  if(!pm.beliefs.length){
-    html+=`<div style="font-size:12px;color:var(--mut);line-height:1.5">I'm watching, but I don't have a confident pattern yet. Keep logging tests — especially pairs where you don't add chlorine in between — and beliefs will appear here.</div>`;
-  }else{
-    pm.beliefs.forEach(b=>{
-      const col=_confColor(b.confidence);
-      html+=`<div style="margin-bottom:11px">
-        <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px">
-          <span style="font-size:12.5px;color:var(--txt)">${b.icon||''} ${b.claim}</span>
-          <span class="mono" style="font-size:10px;color:${col};white-space:nowrap">${b.confidence}%</span>
-        </div>
-        <div style="height:4px;background:rgba(255,255,255,.06);border-radius:3px;margin:5px 0 3px;overflow:hidden">
-          <div style="height:100%;width:${b.confidence}%;background:${col};border-radius:3px"></div>
-        </div>
-        <div style="font-size:9.5px;color:var(--mut2)">from ${b.evidence}${b.detail?' · '+b.detail:''}</div>
-      </div>`;
-    });
-  }
-
-  if(pm.openQuestions&&pm.openQuestions.length){
-    html+=`<div class="mono" style="font-size:8.5px;color:var(--mut2);letter-spacing:1px;text-transform:uppercase;margin:10px 0 6px">Still learning</div>`;
-    pm.openQuestions.slice(0,5).forEach(q=>{html+=`<div style="font-size:11px;color:var(--mut2);margin-bottom:3px;line-height:1.4">• ${q}</div>`;});
-  }
-
-  html+=`<div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:9px;border-top:1px solid var(--line)">
-    <span style="font-size:9px;color:var(--mut2)">${pm.updatedAt?'Updated '+_timeAgo(pm.updatedAt):''}</span>
-    <span onclick="disablePoolModel()" style="font-size:9px;color:var(--mut2);cursor:pointer;text-decoration:underline">turn off</span>
-  </div></div>`;
-  return html;
 }
 
 function buildProfileContext(){
@@ -1653,17 +1482,15 @@ async function sendMessage(text){
       }
     }
     const systemPrompt=SYSTEM.replace('{POOL_SIZE}',S.gallons.toLocaleString());
-    updatePoolModel(); // refresh beliefs before Clarity reasons (runs only if the model is enabled)
     const historyCtx=buildHistoryContext();
     const profileCtx=buildProfileContext();
     const insightsCtx=buildInsightsContext();
-    const modelCtx=buildPoolModelContext();
     const notesCtx=S.poolNotes?`\n\nPOOL NOTES (owner's description of their pool situation — factor this into every answer):\n${S.poolNotes}`:'';
     // Use Haiku for strip/image analysis (fast), Opus for reasoning/learning (chat)
     const hasImage=api.some(m=>Array.isArray(m.content)&&m.content.some(c=>c.type==='image'));
     const model=hasImage?STRIP_MODEL:CHAT_MODEL;
     const reply=await callClaude({model,max_tokens:2000,
-      system:systemPrompt+`\nUser's pool: inground, ~${S.gallons.toLocaleString()} gallons.`+profileCtx+notesCtx+modelCtx+insightsCtx+historyCtx,messages:api});
+      system:systemPrompt+`\nUser's pool: inground, ~${S.gallons.toLocaleString()} gallons.`+profileCtx+notesCtx+insightsCtx+historyCtx,messages:api});
     S.messages.push({role:'assistant',content:reply});
   }catch(e){S.messages.push({role:'assistant',content:`⚠ ${e.message}`});}
   S.thinking=false;render();
