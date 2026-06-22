@@ -4,6 +4,25 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [4.1.3] — 2026-06-21
+
+### Fix — Remove white ring around the app icon (maskable icons) — Patch Release
+
+**Overview**: The v4.1.2 icon was a teal circle on a transparent background. When Clarity was installed, the OS launcher padded that transparent area onto a white plate — producing a white ring around the logo. The app icons are now **full-bleed and maskable**: the teal extends to every edge, so there's no transparent area for the OS to fill, and the launcher crops the icon to its own round/squircle shape with no white border.
+
+### Changed
+- `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` re-rendered **full-bleed** (teal to all edges, twin waves centered within the maskable safe zone).
+- Manifest icons marked `"purpose": "any maskable"` so launchers use them as adaptive icons (round on phones) instead of plating them.
+- The browser-tab favicon stays a round circle (no white-ring issue there).
+
+### Version
+- Bumped 4.1.2 → 4.1.3 (icon fix). Both in-app version strings updated.
+
+### Release note
+- Installed icons are cached aggressively — remove and re-add/reinstall Clarity to pick up the new icon.
+
+---
+
 ## [4.1.2] — 2026-06-21
 
 ### Fix — Real app icon (round logo + PWA manifest) — Patch Release
