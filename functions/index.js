@@ -36,6 +36,7 @@ function anthropicRequest(apiKey, payload) {
         'x-api-key': apiKey,
         'anthropic-version': '2023-06-01',
         'Content-Length': Buffer.byteLength(data),
+        ...(payload.thinking ? {'anthropic-beta': 'interleaved-thinking-2025-05-14'} : {}),
       },
     }, (res) => {
       const chunks = [];
@@ -88,7 +89,7 @@ exports.claude = onRequest(
       res.status(400).json({ error: { message: 'Model "' + (body && body.model) + '" not allowed.' } });
       return;
     }
-    if (body.max_tokens > 2000) body.max_tokens = 2000;
+    if (body.max_tokens > 8000) body.max_tokens = 8000;
 
     try {
       const result = await anthropicRequest(ANTHROPIC_API_KEY.value(), body);
