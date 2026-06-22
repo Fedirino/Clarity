@@ -4,6 +4,28 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [4.1.2] — 2026-06-21
+
+### Fix — Real app icon (round logo + PWA manifest) — Patch Release
+
+**Overview**: Installed/added to a home screen, Clarity showed the generic Chrome globe instead of its own logo, because the app had **no web app manifest** — so browsers had no icon to use for the installed app. This adds a proper manifest and a real, round Clarity icon (the twin-waves mark filling a teal circle) across every surface: browser tab, iOS home screen, and installed PWA.
+
+### Added
+- **Web app manifest (`manifest.webmanifest`)** with name, theme/background colors, `display: standalone`, and PNG icons at 192 and 512 — this is what was missing for installed-app icons.
+- **Round Clarity app icons** rendered as real PNGs from the twin-waves brand mark on a teal circle: `icon-512.png`, `icon-192.png`, `apple-touch-icon.png` (180), `favicon-32.png`.
+- Linked them in `<head>`: round SVG favicon, PNG favicons, `apple-touch-icon`, and the `manifest` link.
+
+### Changed
+- Favicon redesigned from a rounded-square mark to a **filled circle** so it reads as a round logo at every size.
+
+### Version
+- Bumped 4.1.1 → 4.1.2 (app icon + manifest). Both in-app version strings updated.
+
+### Release note
+- New static assets ship to Firebase Hosting root (served at `/icon-192.png`, `/manifest.webmanifest`, etc.). Hard-refresh or `?fresh=` to clear a cached old favicon.
+
+---
+
 ## [4.1.1] — 2026-06-21
 
 ### Fix — Location lookup (ZIP codes + "City, State") — Patch Release
