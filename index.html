@@ -237,7 +237,7 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v4.1.4</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v4.1.5</span></div>
   </div>
 </div>
 
@@ -490,7 +490,7 @@ function renderSetup(){
 
       <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
         <button onclick="fbAuth.signOut()" style="background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--mut);font-size:11px;font-family:inherit;padding:7px 14px;border-radius:9px;cursor:pointer">Sign out</button>
-        <span style="font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v4.1.4</span>
+        <span style="font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v4.1.5</span>
       </div>
     </div>`;
 
@@ -1048,7 +1048,30 @@ function dismissAction(mi,ai){
 }
 
 function renderChat(b){
-  const quick=["How often should I test my water?","My water looks cloudy — what do I check?","How do I shock my pool?","Send me a photo of your test strip and I'll read it"];
+  const quick=(function(){
+    const hist=S.history||[];
+    const hasModel=S.poolModel&&S.poolModel.enabled;
+    const hasReadings=hist.length>=1;
+    const base=[];
+    if(!hasReadings){
+      base.push("What does Clarity track for me?");
+      base.push("How do I take a good strip photo?");
+      base.push("What should I set up first?");
+      base.push("How do I shock my pool?");
+    }else{
+      const last=hist[0]||{};
+      const fc=last.chlorine,ph=last.ph,alk=last.alkalinity;
+      base.push("How does my pool look lately?");
+      if(fc!=null&&fc<1)base.push("My chlorine is very low  what do I add?");
+      else if(ph!=null&&ph>7.8)base.push("Why is my pH running high?");
+      else if(alk!=null&&alk<80)base.push("My alkalinity is low  how do I fix it?");
+      else base.push("What should I focus on this week?");
+      if(!hasModel)base.push("Build my pool model");
+      else base.push("What patterns have you noticed?");
+      base.push("What maintenance is coming up?");
+    }
+    return base.slice(0,4);
+  })()
   let html='<div class="bin">';
   if(!S._savedMsgs)S._savedMsgs=new Set();
   S.messages.forEach((m,idx)=>{
