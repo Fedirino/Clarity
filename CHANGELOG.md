@@ -4,6 +4,21 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [4.1.7] — 2026-06-24
+
+### Fixed — Dashboard rendering error — Hotfix
+
+**Overview**: v4.1.6 broke the dashboard due to a scope error (misplaced closing brace). The entire dashboard tab disappeared or failed to load.
+
+### Changed
+- Fixed JavaScript scope error that prevented dashboard from rendering
+- Removed extra closing brace that ended the `if(hasData)` block prematurely
+
+### Version
+- Bumped 4.1.6 → 4.1.7 (hotfix).
+
+---
+
 ## [4.1.6] — 2026-06-24
 
 ### Added — Swim safety reason explanation — Patch Release

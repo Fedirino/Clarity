@@ -171,7 +171,7 @@ firebase deploy --only functions     # just the proxy
 firebase deploy --only firestore:rules   # just the rules
 ```
 
-Still commit to GitHub for version history — it just no longer triggers the deploy. (If you want auto-deploy on push later, Firebase has a GitHub Action we can add.)
+Still commit to GitHub for version history — and now pushes to `main` also trigger a Firebase deploy through GitHub Actions, so you get version history *and* automatic publishing.
 
 ---
 
