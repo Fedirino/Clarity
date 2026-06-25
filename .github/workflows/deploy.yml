@@ -13,10 +13,18 @@ jobs:
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      - name: Deploy to Firebase Hosting
-        uses: FirebaseExtended/action-hosting-deploy@v0
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_CLARITY_POOL }}
-          channelId: live
-          projectId: clarity-pool
+          node-version: 22
+
+      - name: Install Firebase CLI
+        run: npm install -g firebase-tools
+
+      - name: Write service account key
+        run: echo '${{ secrets.FIREBASE_SERVICE_ACCOUNT_CLARITY_POOL }}' > /tmp/sa.json
+
+      - name: Deploy to Firebase Hosting
+        run: firebase deploy --only hosting --project clarity-pool
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: /tmp/sa.json
