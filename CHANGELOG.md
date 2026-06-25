@@ -4,6 +4,21 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [4.1.6] — 2026-06-24
+
+### Added — Swim safety reason explanation — Patch Release
+
+**Overview**: The Dashboard now shows **why** the pool is marked as "Do not swim" or "Use caution" below the swim status card. Previously users only saw the status icon and label (🚫 Do not swim / ⚠️ Use caution) with no explanation.
+
+### Changed
+- **Swim safety explanation**: When `swimStatus` is not "safe", a new card appears below the status showing the specific reason (e.g., "Chlorine is 0.3 ppm (needs 1+ ppm)" or "pH is 8.2 (too high, needs below 8.0)").
+- Logic includes both danger and caution thresholds with clear explanations for each scenario.
+
+### Version
+- Bumped 4.1.5 → 4.1.6.
+
+---
+
 ## [4.1.3] — 2026-06-21
 
 ### Fix — Remove white ring around the app icon (maskable icons) — Patch Release
