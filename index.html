@@ -715,7 +715,7 @@ function renderDash(b){
   const hasData=!!latest;
 
   // Health score
-  let score=0,measured=0,swimStatus='unknown';
+  let score=0,measured=0,swimStatus='unknown',swimReason='';
   if(hasData){
     KEYS.forEach(k=>{
       if(latest[k]!=null){
@@ -728,7 +728,6 @@ function renderDash(b){
 
     // Swim safety based on FC and pH
     const fc=latest.chlorine,ph=latest.ph;
-    let swimReason='';
     if(fc!=null&&fc<0.5){
       swimStatus='danger';
       swimReason=`Chlorine is ${fc} ppm (needs 1+ ppm)`;
