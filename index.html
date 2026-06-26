@@ -422,15 +422,20 @@ let _notifyTimer=null;
 let _swReg=null;
 function loadTaskNotified(){try{return JSON.parse(localStorage.getItem(TASK_NOTIFY_KEY)||'{}')||{};}catch(e){return {};}}
 function saveTaskNotified(v){localStorage.setItem(TASK_NOTIFY_KEY,JSON.stringify(v));}
-function taskDueAt(t){return (Number(t?.last)||0)+(Number(t?.int)||7)*864e5;}
+function taskDueAt(t){
+  const base=Number(t?.last)||0;
+  const interval=Number(t?.int)||7;
+  const due=new Date(base+interval*864e5);
+  due.setHours(22,0,0,0);
+  return due.getTime();
+}
 function taskNotifyKey(t){return `${t.id}:${taskDueAt(t)}`;}
 function taskNotifyState(){return ('Notification' in window)?Notification.permission:'unsupported';}
-function taskNotificationLabel(){const p=taskNotifyState();return p==='granted'?'Enabled':p==='denied'?'Blocked':p==='default'?'Off':'Unsupported';}
+function taskNotificationLabel(){const p=taskNotifyState();return p==='granted'?'On':'Blocked';}
 function taskNotificationHint(){const p=taskNotifyState();
-  if(p==='granted')return 'Clarity can pop a notification when a scheduled task is due. This works locally in your browser/PWA, and notifications only fire after you enable them here.';
-  if(p==='denied')return 'Notifications are blocked in this browser. You can re-enable them in browser/site settings, then come back here and test again.';
-  if(p==='default')return 'Turn this on so Clarity can alert you when a scheduled task becomes due.';
-  return 'This browser does not support notifications.';
+  if(p==='granted')return 'Clarity will notify you automatically at 10:00 PM on the day a task is due.';
+  if(p==='denied')return 'Notifications are blocked in this browser. You can re-enable them in browser/site settings, then reload Clarity.';
+  return 'Clarity can use browser notifications for scheduled tasks.';
 }
 async function ensureTaskNotificationSupport(){
   if(!('Notification' in window))return 'unsupported';
@@ -449,11 +454,10 @@ function showTaskNotification(task,kind){
   if(taskNotifyState()!=='granted')return;
   const dueAt=taskDueAt(task);
   const when=new Date(dueAt).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
-  const overdue=Math.max(0,Math.ceil((Date.now()-dueAt)/864e5));
   const title=kind==='test'?'Clarity test notification':'Clarity task due';
   const body=kind==='test'
     ?'If you can see this, scheduled task notifications are working.'
-    :`${task.t} is ${overdue>0?`${overdue} day${overdue===1?'':'s'} overdue`:'due now'} (${when}).`;
+    :`${task.t} is due at 10:00 PM today (${when}).`;
   const data={url:`${location.origin}${location.pathname}#schedule`,taskId:task?.id||null,kind};
   if(_swReg&&_swReg.showNotification){
     _swReg.showNotification(title,{body,tag:`clarity-task-${task?.id||'test'}`,renotify:true,icon:'/icon-192.png',badge:'/icon-192.png',data});
@@ -485,10 +489,6 @@ function promptTaskNotifications(){
     ensureTaskNotificationSupport();
     return;
   }
-  if(Notification.permission==='denied'){
-    renderSetup();
-    return;
-  }
   ensureTaskNotificationSupport();
 }
 function sendTaskNotificationTest(){
@@ -502,6 +502,11 @@ function sendTaskNotificationTest(){
 function scheduleTaskNotificationChecks(){
   clearInterval(_notifyTimer);
   _notifyTimer=setInterval(()=>checkTaskNotifications(),60e3);
+}
+function syncTaskNotificationState(){
+  if('Notification' in window && Notification.permission==='granted'){
+    ensureTaskNotificationSupport();
+  }
 }
 
 const $=id=>document.getElementById(id);
@@ -581,10 +586,10 @@ function renderSetup(){
       <div style="margin-top:16px">
         <div class="lab">Scheduled-item notifications</div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px">
-          <button id="notifyToggle" class="chip" style="padding:7px 12px">🔔 ${taskNotificationLabel()}</button>
+          <button id="notifyToggle" class="chip" style="padding:7px 12px">🔔 On</button>
           <button id="notifyTest" class="chip" style="padding:7px 12px">Test</button>
         </div>
-        <div class="hint">${taskNotificationHint()}</div>
+        <div class="hint">Clarity will notify you automatically at 10:00 PM on the day a task is due.</div>
       </div>
 
       <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
