@@ -275,6 +275,8 @@ const firebaseConfig = {
 };
 firebase.initializeApp(firebaseConfig);
 const fbAuth = firebase.auth();
+fbAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(e=>console.warn('Auth persistence failed:',e?.message||e));
+fbAuth.getRedirectResult().catch(e=>console.warn('Redirect auth result failed:',e?.message||e));
 const fbDb = firebase.firestore();
 </script>
 
