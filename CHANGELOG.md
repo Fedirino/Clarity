@@ -4,9 +4,9 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
-## [4.2.0] — 2026-06-26
+## [4.3.0] — 2026-06-26
 
-### Changed — Strip scan confidence / cost tuning — Mid-range release
+### Changed — Strip scan confidence / cost tuning — Major release
 
 **Overview**: Clarity now uses a cheaper model for clean strip photos and falls back to a stronger model only when the image looks hard. It also scores image quality locally so the app can keep confidence honest while spending Opus only when it really helps.
 
@@ -20,7 +20,7 @@ All notable changes to Clarity — Pool Assistant.
 - Confidence behavior still favors honesty over certainty; low-quality images should lower confidence instead of pretending.
 
 ### Version
-- Bumped 4.1.7 → 4.2.0 (mid-range release).
+- Bumped 4.2.0 → 4.3.0 (major release).
 
 ---
 
