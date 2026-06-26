@@ -1515,7 +1515,52 @@ function logReading(read){
 
 /* ── API ── */
 const CHAT_MODEL='claude-opus-4-6'; // Reasoning, patterns, learning
-const STRIP_MODEL='claude-opus-4-6'; // Strip scanning — strongest vision (was Haiku; Haiku could not reliably read pale pads in the card channel)
+const STRIP_MODEL_GOOD='claude-sonnet-4-6'; // cheaper default for clean strip photos
+const STRIP_MODEL_HARD='claude-opus-4-6'; // fallback when the photo is hard or low-quality
+const STRIP_IMAGE_INSTRUCTION='This is a strip reading. The dipped strip is seated in the channel on the LEFT EDGE of the AquaChek card — the vertical column of real color pads on the far-left side, with arrows pointing right to each parameter row. READ EVERY PAD against the row its arrow points to, and give your best estimate for each WITH an honest confidence percent (0-100%). Pads may be pale/near-white (low free/total chlorine, low CYA) and blend into the white channel — read them anyway and set a lower confidence if unsure; faint is not empty. Do NOT refuse, do NOT ask to confirm the strip is there, do NOT ask for a new photo first — always produce the reading and let the confidence percent carry any uncertainty. Only give no reading if this is not a strip/card photo at all, or it is so blurred/dark you cannot even guess. End with the hidden READINGS block including the confidence object.';
+function qualityToLabel(score){
+  if(score>=85) return 'excellent';
+  if(score>=68) return 'good';
+  if(score>=48) return 'fair';
+  if(score>=30) return 'poor';
+  return 'very poor';
+}
+function assessImageQuality(canvas){
+  const ctx=canvas.getContext('2d',{willReadFrequently:true});
+  const {data,width:w,height:h}=ctx.getImageData(0,0,canvas.width,canvas.height);
+  const step=Math.max(1,Math.round(Math.min(w,h)/120));
+  let n=0,sum=0,sum2=0,edge=0,edgeN=0;
+  const prevRow=[];
+  for(let y=0,ry=0;y<h;y+=step,ry++){
+    let left=null;
+    for(let x=0,rx=0;x<w;x+=step,rx++){
+      const i=(y*w+x)*4;
+      const lum=0.2126*data[i]+0.7152*data[i+1]+0.0722*data[i+2];
+      sum+=lum; sum2+=lum*lum; n++;
+      if(left!=null){edge+=Math.abs(lum-left); edgeN++;}
+      const up=prevRow[rx];
+      if(up!=null){edge+=Math.abs(lum-up); edgeN++;}
+      prevRow[rx]=lum;
+      left=lum;
+    }
+  }
+  const mean=sum/Math.max(1,n);
+  const variance=Math.max(0,sum2/Math.max(1,n)-mean*mean);
+  const contrast=Math.sqrt(variance);
+  const edgeAvg=edge/Math.max(1,edgeN);
+  const exposurePenalty=Math.min(45,Math.abs(mean-132)*0.7);
+  const score=Math.round(Math.max(0,Math.min(100,contrast*1.15+edgeAvg*2.2+28-exposurePenalty)));
+  return {score,brightness:Math.round(mean),contrast:Math.round(contrast),edge:Math.round(edgeAvg),label:qualityToLabel(score)};
+}
+function pickStripModel(q){
+  if(!q) return STRIP_MODEL_HARD;
+  if(q.score>=68 && q.contrast>=18 && q.edge>=8) return STRIP_MODEL_GOOD;
+  return STRIP_MODEL_HARD;
+}
+function qualityPrompt(q){
+  if(!q) return '';
+  return `\nIMAGE QUALITY: score ${q.score}/100, brightness ${q.brightness}/255, contrast ${q.contrast}, edge ${q.edge}, label ${q.label}. Use this to calibrate confidence: good quality may justify higher confidence; poor quality should push confidence down, but still give the best honest estimate.`;
+}
 
 function buildInsightsContext(){
   if(S.history.length<3)return'';
@@ -2135,15 +2180,16 @@ async function sendMessage(text){
       S.messages.push({role:'assistant',content:'⚠ Image failed to process. Please try attaching it again.'});
       S._pendingImage=null;renderAttachPreview();render();return;
     }
-    imageData={base64:S._pendingImage.base64,mediaType:S._pendingImage.mediaType,preview:S._pendingImage.preview};
+    imageData={base64:S._pendingImage.base64,mediaType:S._pendingImage.mediaType,preview:S._pendingImage.preview,quality:S._pendingImage.quality||null};
     msg._image=imageData.preview;
     msg._imageSize=imageData.base64.length; // track for confirmation
     msg._imgB64=imageData.base64; msg._imgMedia=imageData.mediaType; // persist so follow-up turns can re-examine the same photo
-    console.log('[Clarity] Image attached:',Math.round(imageData.base64.length/1024)+'KB base64,',imageData.mediaType);
+    msg._imgQuality=imageData.quality||null;
+    console.log('[Clarity] Image attached:',Math.round(imageData.base64.length/1024)+'KB base64,',imageData.mediaType,imageData.quality?`quality ${imageData.quality.score}/100 (${imageData.quality.label})`:'');
     S._pendingImage=null;
     renderAttachPreview();
   }
-  S.messages.push(msg);
+
   $('msgIn').value='';
   $('sendBtn').className='send';
   S.thinking=true;render();
@@ -2153,23 +2199,25 @@ async function sendMessage(text){
     const recent=filtered.slice(-MAX_HISTORY_MSGS);
     let imageIncluded=false;
     // Re-attach photos that are still in the recent window so follow-up turns
-    // ("is this accurate?") keep the actual image in view. Cap to the 2 newest
-    // images to stay under the request size limit; chart rides with the latest.
+    // keep the actual image in view. Cap to the 2 newest images to stay under the request size limit; chart rides with the latest.
     const imgIdx=recent.map((m,i)=>m._imgB64?i:-1).filter(i=>i>=0);
-    const keepImgs=new Set(imgIdx.slice(-2));
     const latestImg=imgIdx.length?imgIdx[imgIdx.length-1]:-1;
+    const latestImgQuality=latestImg>=0?recent[latestImg]._imgQuality||null:null;
+    const keepImgs=new Set(imgIdx.slice(-2));
+
     recent.forEach((m,i)=>{
       if(m._imgB64&&keepImgs.has(i)){
         const content=[];
         if(i===latestImg){
-          content.push({type:'text',text:'This is a strip reading. The dipped strip is seated in the channel on the LEFT EDGE of the AquaChek card — the vertical column of real color pads on the far-left side, with arrows pointing right to each parameter row. READ EVERY PAD against the row its arrow points to, and give your best estimate for each WITH an honest confidence percent (0-100%). Pads may be pale/near-white (low free/total chlorine, low CYA) and blend into the white channel — read them anyway and set a lower confidence if unsure; faint is not empty. Do NOT refuse, do NOT ask to confirm the strip is there, do NOT ask for a new photo first — always produce the reading and let the confidence percent carry any uncertainty. Only give no reading if this is not a strip/card photo at all, or it is so blurred/dark you cannot even guess. End with the hidden READINGS block including the confidence object.'});
+          content.push({type:'text',text:'This is a strip reading. The dipped strip is seated in the channel on the LEFT EDGE of the AquaChek card — the vertical column of real color pads on the far-left side, with arrows pointing right to each parameter row. READ EVERY PAD against the row its arrow points to, and give your best estimate for each WITH an honest confidence percent (0-100%). Pads may be pale/near-white (low free/total chlorine, low CYA) and blend into the white channel — read them anyway and set a lower confidence if unsure; faint is not empty. Do NOT refuse, Do NOT ask to confirm the strip is there, Do NOT ask for a new photo first — always produce the reading and let the confidence percent carry any uncertainty. Only give no reading if this is not a strip/card photo at all, or it is so blurred/dark you cannot even guess. End with the hidden READINGS block including the confidence object.'});
         }
         content.push({type:'image',source:{type:'base64',media_type:m._imgMedia,data:m._imgB64}});
         content.push({type:'text',text:m.content||'Please analyze this image as a pool expert.'});
         raw.push({role:'user',content});
         if(m===msg)imageIncluded=true;
+
       } else if(m._imgB64){
-        raw.push({role:m.role,content:(m.content||'')+' [an earlier photo was here]'});
+
       } else {
         raw.push({role:m.role,content:m.content});
       }
@@ -2210,12 +2258,13 @@ async function sendMessage(text){
     const modelCtx=buildPoolModelContext();
     const weatherCtx=buildWeatherContext();
     const notesCtx=S.poolNotes?`\n\nPOOL NOTES (owner's description of their pool situation — factor this into every answer):\n${S.poolNotes}`:'';
-    // Use Haiku for strip/image analysis (fast), Opus for reasoning/learning (chat)
     const hasImage=api.some(m=>Array.isArray(m.content)&&m.content.some(c=>c.type==='image'));
-    const model=hasImage?STRIP_MODEL:CHAT_MODEL;
-    const reply=await callClaude({model,max_tokens:hasImage?5000:2000,...(hasImage?{thinking:{type:'enabled',budget_tokens:3000},temperature:1}:{}),
-      system:systemPrompt+`\nUser's pool: inground, ~${S.gallons.toLocaleString()} gallons.`+profileCtx+notesCtx+weatherCtx+modelCtx+insightsCtx+historyCtx,messages:api});
+    const model=hasImage?pickStripModel(latestImgQuality):CHAT_MODEL;
+    const stripCtx=hasImage?STRIP_IMAGE_INSTRUCTION+qualityPrompt(latestImgQuality):'';
+    const reply=await callClaude({model,max_tokens:hasImage?4200:2000,...(hasImage?{thinking:{type:'enabled',budget_tokens:2000},temperature:1}:{}),
+      system:systemPrompt+`\nUser's pool: inground, ~${S.gallons.toLocaleString()} gallons.`+profileCtx+notesCtx+weatherCtx+modelCtx+insightsCtx+historyCtx+stripCtx,messages:api});
     S.messages.push({role:'assistant',content:reply});
+
   }catch(e){S.messages.push({role:'assistant',content:`⚠ ${e.message}`});}
   S.thinking=false;render();
 }
@@ -2228,7 +2277,10 @@ function compressImage(file,maxW=1500){
       img.onload=()=>{
         try{
           const s=Math.min(1,maxW/img.width),c=document.createElement('canvas');
-          c.width=img.width*s;c.height=img.height*s;c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+          c.width=img.width*s;c.height=img.height*s;
+          const ctx=c.getContext('2d');
+          ctx.drawImage(img,0,0,c.width,c.height);
+          const quality=assessImageQuality(c);
           URL.revokeObjectURL(url);
           c.toBlob(bl=>{
             if(!bl){rej(new Error('Canvas toBlob failed'));return;}
@@ -2237,8 +2289,8 @@ function compressImage(file,maxW=1500){
             fr.onload=()=>{
               const b64=fr.result.split(',')[1];
               if(!b64||b64.length<50){rej(new Error('Base64 conversion produced empty result'));return;}
-              console.log('[Clarity] Image compressed:',img.width+'x'+img.height,'→',c.width+'x'+c.height,Math.round(b64.length/1024)+'KB');
-              res({base64:b64,mediaType:'image/jpeg'});
+              console.log('[Clarity] Image compressed:',img.width+'x'+img.height,'→',c.width+'x'+c.height,Math.round(b64.length/1024)+'KB',`quality ${quality.score}/100 (${quality.label})`);
+              res({base64:b64,mediaType:'image/jpeg',quality});
             };
             fr.readAsDataURL(bl);
           },'image/jpeg',.92);
