@@ -4,18 +4,23 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
-## [4.1.7] — 2026-06-24
+## [4.2.0] — 2026-06-26
 
-### Fixed — Dashboard rendering error — Hotfix
+### Changed — Strip scan confidence / cost tuning — Mid-range release
 
-**Overview**: v4.1.6 broke the dashboard due to a scope error (misplaced closing brace). The entire dashboard tab disappeared or failed to load.
+**Overview**: Clarity now uses a cheaper model for clean strip photos and falls back to a stronger model only when the image looks hard. It also scores image quality locally so the app can keep confidence honest while spending Opus only when it really helps.
+
+### Added
+- Local image quality scoring for strip photos before sending them to the model.
+- Model routing that prefers `claude-sonnet-4-6` on clean strip photos and falls back to `claude-opus-4-6` for low-quality cases.
+- Quality-aware prompt context so confidence can stay conservative on noisy images.
 
 ### Changed
-- Fixed JavaScript scope error that prevented dashboard from rendering
-- Removed extra closing brace that ended the `if(hasData)` block prematurely
+- Strip scan path now uses a cheaper default model on good photos.
+- Confidence behavior still favors honesty over certainty; low-quality images should lower confidence instead of pretending.
 
 ### Version
-- Bumped 4.1.6 → 4.1.7 (hotfix).
+- Bumped 4.1.7 → 4.2.0 (mid-range release).
 
 ---
 
