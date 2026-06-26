@@ -426,17 +426,18 @@ function taskDueAt(t){
   const base=Number(t?.last)||0;
   const interval=Number(t?.int)||7;
   const due=new Date(base+interval*864e5);
-  due.setHours(22,0,0,0);
+  due.setHours(10,0,0,0);
   return due.getTime();
 }
 function taskNotifyKey(t){return `${t.id}:${taskDueAt(t)}`;}
 function taskNotifyState(){return ('Notification' in window)?Notification.permission:'unsupported';}
 function taskNotificationLabel(){const p=taskNotifyState();return p==='granted'?'On':'Blocked';}
 function taskNotificationHint(){const p=taskNotifyState();
-  if(p==='granted')return 'Clarity will notify you automatically at 10:00 PM on the day a task is due.';
+  if(p==='granted')return 'Clarity will notify you automatically at 10:00 AM on the day a task is due.';
   if(p==='denied')return 'Notifications are blocked in this browser. You can re-enable them in browser/site settings, then reload Clarity.';
   return 'Clarity can use browser notifications for scheduled tasks.';
 }
+
 async function ensureTaskNotificationSupport(){
   if(!('Notification' in window))return 'unsupported';
   if(Notification.permission==='default'){
@@ -457,7 +458,7 @@ function showTaskNotification(task,kind){
   const title=kind==='test'?'Clarity test notification':'Clarity task due';
   const body=kind==='test'
     ?'If you can see this, scheduled task notifications are working.'
-    :`${task.t} is due at 10:00 PM today (${when}).`;
+    :`${task.t} is due at 10:00 AM today (${when}).`;
   const data={url:`${location.origin}${location.pathname}#schedule`,taskId:task?.id||null,kind};
   if(_swReg&&_swReg.showNotification){
     _swReg.showNotification(title,{body,tag:`clarity-task-${task?.id||'test'}`,renotify:true,icon:'/icon-192.png',badge:'/icon-192.png',data});
@@ -1328,8 +1329,9 @@ function renderHistory(b){
         <div class="mono" style="font-size:9px;color:var(--mut2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;margin-top:4px">Notes</div>
         <input class="hist-notes" data-idx="${idx}" type="text" placeholder="Party, heavy rain, gone for a week…" value="${esc(e.notes||'')}"
           style="width:100%;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:9px;padding:8px 11px;color:var(--txt);font-size:12px;font-family:inherit">
+        <button class="btn hist-del" data-idx="${idx}" style="margin-top:10px;width:100%;background:rgba(236,138,114,.08);border:1px solid rgba(236,138,114,.24);color:var(--coral);font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:10px 12px">Delete this test</button>
       </div>`;
-    }
+
     html+=`<div class="hcard" data-ts="${e.timestamp}" style="cursor:pointer"><div class="top"><span class="ts">${ts}</span>
       <span class="fl" style="color:${ok?'var(--green)':'var(--coral)'};background:${ok?'rgba(92,200,160,.1)':'rgba(236,138,114,.1)'}">${ok?'All ideal':issues.length+' issue'+(issues.length>1?'s':'')} <span style="opacity:.6">${open?'▴':'▾'}</span></span></div>
       <div class="h5">${KEYS.map(k=>{const v=e[k],c=color(v,k);
@@ -1376,6 +1378,15 @@ function renderHistory(b){
       const idx=+el.dataset.idx;
       S.history[idx].notes=el.value.trim();
       persist();
+    };
+  });
+
+  // Single-test delete buttons
+  b.querySelectorAll('.hist-del').forEach(el=>{
+    el.onclick=ev=>{
+      ev.stopPropagation();
+      const idx=+el.dataset.idx;
+      if(confirm('Delete this test?')){S.history.splice(idx,1);persist();render();}
     };
   });
 
