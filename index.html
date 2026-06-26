@@ -2470,10 +2470,21 @@ $('taskScrim').onclick=e=>{if(e.target.id==='taskScrim')closeScrim('taskScrim')}
    The app only renders after sign-in. While signed out, the gate overlay
    covers everything. On sign-in we pull cloud data, then render. */
 const _authGate=$('authGate'), _authErr=$('authErr');
-$('signInBtn').onclick=()=>{
+const _googleProvider=new firebase.auth.GoogleAuthProvider();
+$('signInBtn').onclick=async()=>{
   _authErr.textContent='';
-  fbAuth.signInWithPopup(new firebase.auth.GoogleAuthProvider())
-    .catch(e=>{_authErr.textContent=e.message||'Sign-in failed. Try again.';});
+  try{
+    await fbAuth.signInWithPopup(_googleProvider);
+  }catch(e){
+    const code=e?.code||'';
+    const popupBlocked=code==='auth/popup-blocked'||code==='auth/cancelled-popup-request'||code==='auth/operation-not-supported-in-this-environment';
+    if(popupBlocked){
+      try{await fbAuth.signInWithRedirect(_googleProvider);}
+      catch(redirectErr){_authErr.textContent=redirectErr?.message||'Sign-in failed. Try opening Clarity in a normal browser tab.';}
+    }else{
+      _authErr.textContent=e?.message||'Sign-in failed. Try again.';
+    }
+  }
 };
 fbAuth.onAuthStateChanged(async user=>{
   if(user){
