@@ -237,7 +237,7 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v4.3.1</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v4.4.0</span></div>
   </div>
 </div>
 
@@ -414,6 +414,96 @@ async function cloudHydrate(){
   }catch(e){console.warn('Cloud sync (hydrate) failed:',e.message);}
 }
 
+/* ── Task notifications: browser notifications for scheduled items. These are
+   local/PWA reminders that work when Clarity is open or installed, after the
+   user grants notification permission. A backend push channel can come later. ── */
+const TASK_NOTIFY_KEY='clarity-task-notified-v1';
+let _notifyTimer=null;
+let _swReg=null;
+function loadTaskNotified(){try{return JSON.parse(localStorage.getItem(TASK_NOTIFY_KEY)||'{}')||{};}catch(e){return {};}}
+function saveTaskNotified(v){localStorage.setItem(TASK_NOTIFY_KEY,JSON.stringify(v));}
+function taskDueAt(t){return (Number(t?.last)||0)+(Number(t?.int)||7)*864e5;}
+function taskNotifyKey(t){return `${t.id}:${taskDueAt(t)}`;}
+function taskNotifyState(){return ('Notification' in window)?Notification.permission:'unsupported';}
+function taskNotificationLabel(){const p=taskNotifyState();return p==='granted'?'Enabled':p==='denied'?'Blocked':p==='default'?'Off':'Unsupported';}
+function taskNotificationHint(){const p=taskNotifyState();
+  if(p==='granted')return 'Clarity can pop a notification when a scheduled task is due. This works locally in your browser/PWA, and notifications only fire after you enable them here.';
+  if(p==='denied')return 'Notifications are blocked in this browser. You can re-enable them in browser/site settings, then come back here and test again.';
+  if(p==='default')return 'Turn this on so Clarity can alert you when a scheduled task becomes due.';
+  return 'This browser does not support notifications.';
+}
+async function ensureTaskNotificationSupport(){
+  if(!('Notification' in window))return 'unsupported';
+  if(Notification.permission==='default'){
+    try{await Notification.requestPermission();}catch(e){}
+  }
+  if('serviceWorker' in navigator){
+    try{_swReg=await navigator.serviceWorker.register('/sw.js');}
+    catch(e){console.warn('Task notification service worker registration failed:',e.message);}
+  }
+  renderSetup();
+  checkTaskNotifications(true);
+  return Notification.permission;
+}
+function showTaskNotification(task,kind){
+  if(taskNotifyState()!=='granted')return;
+  const dueAt=taskDueAt(task);
+  const when=new Date(dueAt).toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+  const overdue=Math.max(0,Math.ceil((Date.now()-dueAt)/864e5));
+  const title=kind==='test'?'Clarity test notification':'Clarity task due';
+  const body=kind==='test'
+    ?'If you can see this, scheduled task notifications are working.'
+    :`${task.t} is ${overdue>0?`${overdue} day${overdue===1?'':'s'} overdue`:'due now'} (${when}).`;
+  const data={url:`${location.origin}${location.pathname}#schedule`,taskId:task?.id||null,kind};
+  if(_swReg&&_swReg.showNotification){
+    _swReg.showNotification(title,{body,tag:`clarity-task-${task?.id||'test'}`,renotify:true,icon:'/icon-192.png',badge:'/icon-192.png',data});
+  }else if('Notification' in window){
+    new Notification(title,{body,tag:`clarity-task-${task?.id||'test'}`});
+  }
+}
+function checkTaskNotifications(force=false){
+  if(taskNotifyState()!=='granted')return;
+  const seen=loadTaskNotified();
+  const now=Date.now();
+  let changed=false;
+  S.tasks.forEach(t=>{
+    if(!t||t.done)return;
+    const dueAt=taskDueAt(t);
+    const key=taskNotifyKey(t);
+    if(now>=dueAt&&seen[key]!==true){
+      showTaskNotification(t,'due');
+      seen[key]=true;
+      changed=true;
+    }
+  });
+  if(changed)saveTaskNotified(seen);
+  if(force)renderSetup();
+}
+function promptTaskNotifications(){
+  if(!('Notification' in window))return;
+  if(Notification.permission==='granted'){
+    ensureTaskNotificationSupport();
+    return;
+  }
+  if(Notification.permission==='denied'){
+    renderSetup();
+    return;
+  }
+  ensureTaskNotificationSupport();
+}
+function sendTaskNotificationTest(){
+  const sample=S.tasks.find(t=>!t.done)||{id:'test',t:'Sample scheduled task',last:Date.now(),int:1,done:false};
+  if(taskNotifyState()!=='granted'){
+    promptTaskNotifications();
+    return;
+  }
+  showTaskNotification(sample,'test');
+}
+function scheduleTaskNotificationChecks(){
+  clearInterval(_notifyTimer);
+  _notifyTimer=setInterval(()=>checkTaskNotifications(),60e3);
+}
+
 const $=id=>document.getElementById(id);
 const TABS=[['dash','Dashboard'],['chat','Chat'],['chem','Chemistry'],['history','History'],['schedule','Schedule']];
 
@@ -488,9 +578,18 @@ function renderSetup(){
       <textarea id="poolNotesInput" style="width:100%;min-height:70px;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:11px;padding:10px 12px;color:var(--txt);font-size:13px;font-family:inherit;resize:vertical;line-height:1.5" placeholder="Anything else Clarity should know — e.g. 'has a slow leak', 'recently replastered', 'lots of trees nearby'…">${esc(S.poolNotes)}</textarea>
       <div class="hint">These notes are sent to Clarity with every message so it understands your pool's ongoing situation.</div></div>
 
+      <div style="margin-top:16px">
+        <div class="lab">Scheduled-item notifications</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px">
+          <button id="notifyToggle" class="chip" style="padding:7px 12px">🔔 ${taskNotificationLabel()}</button>
+          <button id="notifyTest" class="chip" style="padding:7px 12px">Test</button>
+        </div>
+        <div class="hint">${taskNotificationHint()}</div>
+      </div>
+
       <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
         <button onclick="fbAuth.signOut()" style="background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--mut);font-size:11px;font-family:inherit;padding:7px 14px;border-radius:9px;cursor:pointer">Sign out</button>
-        <span style="font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v4.3.1</span>
+        <span style="font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v4.4.0</span>
       </div>
     </div>`;
 
@@ -521,6 +620,10 @@ function renderSetup(){
   // Close button
   const closeBtn=$('closeSetup');
   if(closeBtn)closeBtn.onclick=()=>{S.setupOpen=false;renderSetup();};
+  const notifyToggle=$('notifyToggle');
+  if(notifyToggle)notifyToggle.onclick=()=>{promptTaskNotifications();};
+  const notifyTest=$('notifyTest');
+  if(notifyTest)notifyTest.onclick=()=>{sendTaskNotificationTest();};
 }
 
 function render(){
@@ -1337,7 +1440,7 @@ function saveTask(){
   } else {
     S.tasks.push({id:Date.now(),t:name,freq,int,last:Date.now()-int*864e5,done:false});
   }
-  persist();closeScrim('taskScrim');render();
+  persist();closeScrim('taskScrim');render();checkTaskNotifications(true);
 }
 function closeScrim(id){$(id).classList.remove('on')}
 
@@ -2343,7 +2446,7 @@ $('uploadBtn').onclick=()=>$('uploadIn').click();
 $('fileIn').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(f)attachImage(f);};
 $('uploadIn').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(f)attachImage(f);};
 $('tSave').onclick=saveTask;
-$('tDelete').onclick=()=>{if(S.editTask&&confirm('Delete this task?')){S.tasks=S.tasks.filter(x=>x.id!==S.editTask);persist();closeScrim('taskScrim');render();}};
+$('tDelete').onclick=()=>{if(S.editTask&&confirm('Delete this task?')){S.tasks=S.tasks.filter(x=>x.id!==S.editTask);persist();closeScrim('taskScrim');render();checkTaskNotifications(true);}};
 $('taskScrim').onclick=e=>{if(e.target.id==='taskScrim')closeScrim('taskScrim')};
 
 /* ── Auth gate & boot ──
@@ -2361,6 +2464,8 @@ fbAuth.onAuthStateChanged(async user=>{
     _authGate.style.display='none';
     await cloudHydrate();
     render();
+    scheduleTaskNotificationChecks();
+    checkTaskNotifications(true);
     fetchWeather(); // Phase 4: pull the local forecast once signed in (self-guards if no location)
   }else{
     _uid=null;
