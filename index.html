@@ -1331,6 +1331,7 @@ function renderHistory(b){
           style="width:100%;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:9px;padding:8px 11px;color:var(--txt);font-size:12px;font-family:inherit">
         <button class="btn hist-del" data-idx="${idx}" style="margin-top:10px;width:100%;background:rgba(236,138,114,.08);border:1px solid rgba(236,138,114,.24);color:var(--coral);font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:10px 12px">Delete this test</button>
       </div>`;
+    }
 
     html+=`<div class="hcard" data-ts="${e.timestamp}" style="cursor:pointer"><div class="top"><span class="ts">${ts}</span>
       <span class="fl" style="color:${ok?'var(--green)':'var(--coral)'};background:${ok?'rgba(92,200,160,.1)':'rgba(236,138,114,.1)'}">${ok?'All ideal':issues.length+' issue'+(issues.length>1?'s':'')} <span style="opacity:.6">${open?'▴':'▾'}</span></span></div>
