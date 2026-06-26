@@ -4,6 +4,20 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [4.3.1] — 2026-06-26
+
+### Fixed — Image attachment regression — Hotfix
+
+**Overview**: v4.3.0 silently dropped the new user message from `S.messages` during the strip-routing refactor. The send pipeline then reported "Something went wrong attaching the image" because the just-attached image never made it into the recent-history window.
+
+### Fixed
+- Restored `S.messages.push(msg)` after the image attachment block so the new user turn (with the image) is actually added to history before the API call assembles the payload.
+
+### Version
+- Bumped 4.3.0 → 4.3.1 (hotfix).
+
+---
+
 ## [4.3.0] — 2026-06-26
 
 ### Changed — Strip scan confidence / cost tuning — Major release

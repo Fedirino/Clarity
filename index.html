@@ -237,7 +237,7 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v4.3.0</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v4.3.1</span></div>
   </div>
 </div>
 
@@ -490,7 +490,7 @@ function renderSetup(){
 
       <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
         <button onclick="fbAuth.signOut()" style="background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--mut);font-size:11px;font-family:inherit;padding:7px 14px;border-radius:9px;cursor:pointer">Sign out</button>
-        <span style="font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v4.3.0</span>
+        <span style="font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v4.3.1</span>
       </div>
     </div>`;
 
@@ -2189,7 +2189,7 @@ async function sendMessage(text){
     S._pendingImage=null;
     renderAttachPreview();
   }
-
+  S.messages.push(msg);
   $('msgIn').value='';
   $('sendBtn').className='send';
   S.thinking=true;render();
@@ -2198,7 +2198,7 @@ async function sendMessage(text){
     const filtered=S.messages.filter(m=>m.role==='user'||m.role==='assistant');
     const recent=filtered.slice(-MAX_HISTORY_MSGS);
     let imageIncluded=false;
-    // Re-attach photos that are still in the recent window so follow-up turns
+
     // keep the actual image in view. Cap to the 2 newest images to stay under the request size limit; chart rides with the latest.
     const imgIdx=recent.map((m,i)=>m._imgB64?i:-1).filter(i=>i>=0);
     const latestImg=imgIdx.length?imgIdx[imgIdx.length-1]:-1;
