@@ -359,6 +359,7 @@ let S={
   history: store.get('history')||[],
   tasks: store.get('tasks')||defaultTasks(),
   poolNotes: store.get('poolNotes')||'',
+  notifyTime: store.get('notifyTime')||'10:00',
   poolProfile: store.get('poolProfile')||{
     type:null, surface:null, filter:null, climate:null,
     sun:null, water:null, usage:null, equipment:[]
@@ -383,7 +384,7 @@ function defaultTasks(){
 /* ── Persistence: localStorage cache + Firestore cloud sync ── */
 let _uid=null, _pushT=null;
 function cloudDoc(){return _uid?fbDb.collection('clarity').doc(_uid):null;}
-function persistLocal(){store.set('gallons',S.gallons);store.set('history',S.history);store.set('tasks',S.tasks);store.set('poolNotes',S.poolNotes);store.set('poolProfile',S.poolProfile);store.set('poolModel',S.poolModel);}
+function persistLocal(){store.set('gallons',S.gallons);store.set('history',S.history);store.set('tasks',S.tasks);store.set('poolNotes',S.poolNotes);store.set('notifyTime',S.notifyTime);store.set('poolProfile',S.poolProfile);store.set('poolModel',S.poolModel);}
 function cloudPush(){
   const doc=cloudDoc();if(!doc)return;
   clearTimeout(_pushT);
@@ -422,18 +423,24 @@ let _notifyTimer=null;
 let _swReg=null;
 function loadTaskNotified(){try{return JSON.parse(localStorage.getItem(TASK_NOTIFY_KEY)||'{}')||{};}catch(e){return {};}}
 function saveTaskNotified(v){localStorage.setItem(TASK_NOTIFY_KEY,JSON.stringify(v));}
+function taskNotifyMinutes(){
+  const [h,m]=(S.notifyTime||'10:00').split(':').map(n=>Number(n));
+  return [Number.isFinite(h)?h:10, Number.isFinite(m)?m:0];
+}
 function taskDueAt(t){
   const base=Number(t?.last)||0;
   const interval=Number(t?.int)||7;
   const due=new Date(base+interval*864e5);
-  due.setHours(10,0,0,0);
+  const [h,m]=taskNotifyMinutes();
+  due.setHours(h,m,0,0);
   return due.getTime();
 }
+
 function taskNotifyKey(t){return `${t.id}:${taskDueAt(t)}`;}
 function taskNotifyState(){return ('Notification' in window)?Notification.permission:'unsupported';}
 function taskNotificationLabel(){const p=taskNotifyState();return p==='granted'?'On':'Blocked';}
 function taskNotificationHint(){const p=taskNotifyState();
-  if(p==='granted')return 'Clarity will notify you automatically at 10:00 AM on the day a task is due.';
+  if(p==='granted')return `Clarity will notify you automatically at ${S.notifyTime||'10:00'} on the day a task is due.`;
   if(p==='denied')return 'Notifications are blocked in this browser. You can re-enable them in browser/site settings, then reload Clarity.';
   return 'Clarity can use browser notifications for scheduled tasks.';
 }
@@ -458,7 +465,7 @@ function showTaskNotification(task,kind){
   const title=kind==='test'?'Clarity test notification':'Clarity task due';
   const body=kind==='test'
     ?'If you can see this, scheduled task notifications are working.'
-    :`${task.t} is due at 10:00 AM today (${when}).`;
+    :`${task.t} is due at ${S.notifyTime||'10:00'} today (${when}).`;
   const data={url:`${location.origin}${location.pathname}#schedule`,taskId:task?.id||null,kind};
   if(_swReg&&_swReg.showNotification){
     _swReg.showNotification(title,{body,tag:`clarity-task-${task?.id||'test'}`,renotify:true,icon:'/icon-192.png',badge:'/icon-192.png',data});
@@ -589,8 +596,12 @@ function renderSetup(){
         <div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:6px">
           <button id="notifyToggle" class="chip" style="padding:7px 12px">🔔 On</button>
           <button id="notifyTest" class="chip" style="padding:7px 12px">Test</button>
+          <div style="flex:1 1 140px;display:flex;align-items:center;gap:8px">
+            <label for="notifyTime" style="font-size:11px;color:var(--mut2);text-transform:uppercase;letter-spacing:1px">At</label>
+            <input id="notifyTime" type="time" value="${esc(S.notifyTime||'10:00')}" style="flex:1;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:11px;padding:7px 10px;color:var(--txt);font-size:13px;font-family:inherit">
+          </div>
         </div>
-        <div class="hint">Clarity will notify you automatically at 10:00 PM on the day a task is due.</div>
+        <div class="hint">Clarity will notify you automatically at ${S.notifyTime||'10:00'} on the day a task is due.</div>
       </div>
 
       <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
@@ -630,6 +641,13 @@ function renderSetup(){
   if(notifyToggle)notifyToggle.onclick=()=>{promptTaskNotifications();};
   const notifyTest=$('notifyTest');
   if(notifyTest)notifyTest.onclick=()=>{sendTaskNotificationTest();};
+  const notifyTime=$('notifyTime');
+  if(notifyTime)notifyTime.onchange=()=>{
+    S.notifyTime=notifyTime.value||'10:00';
+    persist();
+    renderSetup();
+    checkTaskNotifications(true);
+  };
 }
 
 function render(){
