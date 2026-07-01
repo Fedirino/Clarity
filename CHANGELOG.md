@@ -4,6 +4,59 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [4.5.0] — 2026-07-01
+
+### Added — "Glass & Water" visual overhaul + trend deltas, CSV export — Minor Release
+
+**Overview**: A full visual refresh with zero logic changes to chemistry, scanning, or sync. The app now has a living-water background (two soft light blobs drifting slowly behind everything), glassmorphism cards with inner highlights, an animated **health ring** on the dashboard, glowing accents on active elements, and press/hover micro-interactions throughout. Every number on screen is computed exactly as before — this release changes presentation, not math.
+
+### Added
+- **Animated Pool Health ring**: the dashboard health score now renders as an SVG progress ring that sweeps in on load, color-coded green/amber/coral, with a word label (Pristine ≥90 / Healthy ≥75 / Fair ≥50 / Needs work). Shows "x/6 measured" when a test didn't include every pad. Same score math as before — presentation only.
+- **Trend deltas on sparklines**: each dashboard trend card now shows the change vs the previous test (e.g. "↘ −0.4 vs last"), colored green when the value moved *toward* the ideal midpoint, coral when it moved away and is out of range, muted otherwise. Deterministic.
+- **CSV export**: a "⬇ CSV" button in History downloads the full test history (all 6 parameters + actions, amounts, notes, gallons) as `clarity-history-YYYY-MM-DD.csv` for Excel/Sheets. No AI involved, data leaves nothing out.
+- **Mini gauges on dashboard readings**: the 6 current-reading tiles now include the same ideal-range gauge bar used on scan results cards (existing `gaugeHTML`, reused).
+- **Freshness color on "Last tested"**: green ≤3 days, amber ≤7, coral beyond — matches the testing-cadence advice Clarity already gives.
+
+### Changed
+- **Living-water background**: two blurred aqua/teal light blobs drift very slowly behind the app (pure CSS transform animation, GPU-cheap, `pointer-events:none`).
+- **Glass cards**: `formcard`/history cards use a subtle gradient glass fill, aqua-tinted borders, and a 1px inner top highlight. Header and input bar get stronger blur + saturation.
+- **Sparklines upgraded**: area-gradient fill under the line, faint dots on history points, glowing dot on the latest reading, full-width responsive scaling; ideal band kept.
+- **Micro-interactions**: buttons/chips/tabs scale down slightly on press; history/task cards lift on hover; active tab, chips, and send button carry a soft aqua glow; "Everything is in range" line gets a slow shine sweep; logo icon floats gently.
+- **Accessibility**: `prefers-reduced-motion` disables all decorative animation; `:focus-visible` outlines added for keyboard use; health ring has an ARIA label.
+
+### Infrastructure
+- **Node 20 → 22** for the Cloud Function (`functions/package.json` engines + `firebase.json` runtime). Node 20 is deprecated on Cloud Functions. **Takes effect on the next `firebase deploy --only functions` from Cloud Shell** — the GitHub Action only deploys hosting, and the currently deployed function is untouched until then.
+- **`.gitignore` now excludes `CLAUDE.md`** (the session-context file contains the owner UID and should never be committed to the public repo).
+
+### Truthfulness Notes
+- No displayed value changed meaning: health score, swim status, insights, beliefs, and forecasts use the exact same computations as v4.4.0. The ring, deltas, and colors are new *renderings* of numbers that were already computed deterministically from real history.
+- The CSV export writes the stored readings verbatim — no rounding, no fill-ins; empty cells stay empty.
+
+### Version
+- Bumped 4.4.0 → 4.5.0. Both in-app version strings updated (footer + settings panel).
+
+---
+
+## [4.4.0] — 2026-06-26
+
+### Added — Task notifications, sign-in hardening — Minor Release *(entry reconstructed 2026-07-01 from commit history — 4.4.0 originally shipped without a changelog entry)*
+
+**Overview**: Clarity gained real browser/PWA notifications for scheduled maintenance tasks, and sign-in got more resilient. Reconstructed from the commits between 4.3.1 and the 4.4.0 deploy; listed here so the changelog stays complete and honest.
+
+### Added
+- **Task notifications** (`Add task notifications`, `Pin task notifications to 10pm`, `Set task notifications to 10am and add test delete`, `Make notification time user-selectable`): a new `sw.js` service worker + Notification API integration fires a local notification on the day a task is due, at a time you pick in ⚙ settings (default 10:00). Includes an "On/Test" control pair in settings and per-task due tracking so each task only notifies once per due date.
+- **Per-test delete**: a "Delete this test" button inside an expanded History card (alongside the existing full clear).
+
+### Fixed
+- **Sign-in redirect fallback** (`Add sign-in redirect fallback`): if the Google popup is blocked, sign-in falls back to a redirect flow.
+- **Auth persistence hardened** (`Harden auth persistence for login`): explicit LOCAL persistence + redirect-result handling so sessions survive restarts reliably.
+- **History rendering brace fix** (`Fix test history rendering brace`).
+
+### Note on 4.2.0
+- No 4.2.0 release exists in git history — the version went 4.1.8 → 4.3.0 (the 4.3.0 entry's "Bumped 4.2.0 → 4.3.0" line was written against a planned number that never shipped). Versions 4.1.7/4.1.8 were small unlogged `index.html` updates.
+
+---
+
 ## [4.3.1] — 2026-06-26
 
 ### Fixed — Image attachment regression — Hotfix
