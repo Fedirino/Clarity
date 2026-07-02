@@ -9,13 +9,13 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Clarity">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='16' fill='%230d7390'/%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cpath d='M2.6 13 q3.35 -3.5 6.7 0 t6.7 0 t6.7 0 t6.7 0' stroke='%23eafcfb' stroke-width='2.1'/%3E%3Cpath d='M2.6 19 q3.35 -3.5 6.7 0 t6.7 0 t6.7 0 t6.7 0' stroke='%23aef2ee' stroke-width='2.1' opacity='0.82'/%3E%3C/g%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%236fe3ff'/%3E%3Cstop offset='1' stop-color='%230d7390'/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath d='M24 4C24 4 9.5 19 9.5 30a14.5 14.5 0 0 0 29 0C38.5 19 24 4 24 4Z' fill='url(%23g)'/%3E%3Cpath d='M12 29 q3 -3 6 0 t6 0 t6 0' fill='none' stroke='%23eafcfb' stroke-width='2.4' stroke-linecap='round' opacity='0.85'/%3E%3C/svg%3E">
 <link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600&family=DM+Sans:wght@400;500;600&family=DM+Mono&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400;500;600&family=DM+Mono&display=swap');
 :root{
   --bg:#0b1a26; --bg2:#081420; --panel:rgba(255,255,255,.045); --panel2:rgba(255,255,255,.07);
   --line:rgba(255,255,255,.08); --line2:rgba(120,200,225,.22);
@@ -24,8 +24,8 @@
   --teal1:#1a9a82; --teal2:#0d7390;
   --shadow:0 22px 60px -24px rgba(0,0,0,.7);
   /* v4.5.0 glass layer */
-  --glass:linear-gradient(160deg,rgba(255,255,255,.082),rgba(255,255,255,.032));
-  --glass-line:rgba(148,214,235,.15);
+  --glass:linear-gradient(165deg,rgba(255,255,255,.075),rgba(255,255,255,.033));
+  --glass-line:rgba(255,255,255,.13);
   --glow:0 0 24px -8px rgba(91,198,220,.5);
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -35,26 +35,32 @@
 html,body{height:100%}
 body{
   background:
-    radial-gradient(1100px 520px at 78% -8%,rgba(91,198,220,.16),transparent 60%),
-    radial-gradient(800px 480px at -8% 112%,rgba(26,154,130,.14),transparent 58%),
-    linear-gradient(165deg,var(--bg2),var(--bg));
-  color:var(--txt);font-family:'DM Sans',system-ui,sans-serif;overflow:hidden;
+    radial-gradient(800px 460px at 50% -8%,rgba(111,227,255,.10),transparent 60%),
+    linear-gradient(180deg,#02121d 0%,#04283d 56%,#053a55 100%);
+  color:var(--txt);font-family:'Outfit',system-ui,sans-serif;font-weight:300;overflow:hidden;
 }
-/* ── v4.5.0: living-water background — two soft light blobs drifting slowly.
-   Fixed, pointer-events:none, animated with transform only (GPU-cheap). ── */
-body::before,body::after{content:'';position:fixed;z-index:-1;border-radius:50%;pointer-events:none;filter:blur(80px);will-change:transform}
-body::before{width:min(58vw,520px);height:min(58vw,520px);top:-14%;right:-12%;opacity:.5;
-  background:radial-gradient(circle at 32% 32%,rgba(91,198,220,.4),rgba(13,115,144,.12) 58%,transparent 72%);
+/* ── v4.6.0 "Deep Glass": underwater atmosphere — light rays, two glow blobs,
+   and ambient bubbles (JS). All fixed, pointer-events:none, transform-only. ── */
+html::before{content:'';position:fixed;inset:-18% -10%;pointer-events:none;z-index:-1;opacity:.42;mix-blend-mode:screen;
+  background:conic-gradient(from 178deg at 50% -8%,transparent 43%,rgba(111,227,255,.09) 47%,transparent 51%,rgba(111,227,255,.06) 56%,transparent 60%,rgba(111,227,255,.1) 65%,transparent 69%);
+  animation:sway 16s ease-in-out infinite alternate;transform-origin:50% 0}
+@keyframes sway{from{transform:rotate(-2deg)}to{transform:rotate(2deg)}}
+body::before,body::after{content:'';position:fixed;z-index:-1;border-radius:50%;pointer-events:none;filter:blur(85px);will-change:transform}
+body::before{width:min(58vw,460px);height:min(58vw,460px);top:-10%;right:-14%;opacity:.55;
+  background:radial-gradient(circle at 34% 34%,rgba(111,227,255,.34),rgba(13,115,144,.1) 58%,transparent 72%);
   animation:drift1 26s ease-in-out infinite alternate}
-body::after{width:min(52vw,470px);height:min(52vw,470px);bottom:-16%;left:-13%;opacity:.42;
-  background:radial-gradient(circle at 62% 62%,rgba(26,154,130,.38),rgba(26,154,130,.1) 58%,transparent 74%);
-  animation:drift2 34s ease-in-out infinite alternate}
-@keyframes drift1{to{transform:translate(-7vw,7vh) scale(1.18)}}
-@keyframes drift2{to{transform:translate(8vw,-6vh) scale(1.12)}}
+body::after{width:min(52vw,410px);height:min(52vw,410px);bottom:-14%;left:-12%;opacity:.45;
+  background:radial-gradient(circle at 62% 62%,rgba(62,207,178,.3),rgba(26,154,130,.08) 58%,transparent 74%);
+  animation:drift2 32s ease-in-out infinite alternate}
+@keyframes drift1{to{transform:translate(-60px,50px) scale(1.14)}}
+@keyframes drift2{to{transform:translate(60px,-46px) scale(1.1)}}
+.bubble{position:fixed;bottom:-22px;border-radius:50%;pointer-events:none;z-index:0;filter:blur(.6px);
+  background:radial-gradient(circle at 33% 30%,rgba(255,255,255,.42),rgba(255,255,255,.05) 62%);animation:rise linear infinite}
+@keyframes rise{to{transform:translateY(-112vh)}}
 textarea:focus,input:focus,select:focus{outline:none}
 ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:rgba(255,255,255,.1);border-radius:3px}
-.app{height:100vh;height:100dvh;display:flex;flex-direction:column}
-.mono{font-family:'DM Mono',monospace}.serif{font-family:'Playfair Display',serif}
+.app{height:100vh;height:100dvh;display:flex;flex-direction:column;position:relative;z-index:1}
+.mono{font-family:'DM Mono',monospace}.serif{font-family:'Outfit',sans-serif;font-weight:500;letter-spacing:.4px}
 
 /* header */
 .hd{padding:max(16px,env(safe-area-inset-top)) 20px 0;flex-shrink:0;
@@ -111,7 +117,7 @@ textarea:focus,input:focus,select:focus{outline:none}
 .sec .add{background:var(--panel2);border:1px solid var(--line2);color:var(--aqua);border-radius:10px;padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer;transition:.2s;font-family:inherit}
 .sec .add:hover{background:var(--aqua);color:var(--bg)}
 
-.formcard{background:var(--glass);border:1px solid var(--glass-line);border-radius:18px;padding:19px;margin-bottom:14px;box-shadow:var(--shadow),inset 0 1px 0 rgba(255,255,255,.055)}
+.formcard{background:var(--glass);border:1px solid var(--glass-line);border-radius:22px;padding:19px;margin-bottom:14px;box-shadow:0 30px 64px -32px rgba(0,0,0,.62),inset 0 1px 0 rgba(255,255,255,.15)}
 .formcard h3{font-size:13px;margin-bottom:15px;display:flex;align-items:center;gap:8px;letter-spacing:.3px}
 .inrow{display:flex;align-items:center;gap:12px;margin-bottom:11px}
 .inrow label{flex:1;font-size:13px}
@@ -125,7 +131,7 @@ textarea:focus,input:focus,select:focus{outline:none}
 .dose .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 .dose .nm{font-size:13.5px;font-weight:600}
 .dose .badge{font-size:9px;padding:2px 8px;border-radius:5px;letter-spacing:1px;font-family:'DM Mono',monospace}
-.dose .amt{font-size:21px;font-family:'Playfair Display',serif;color:var(--aqua2);margin:5px 0}
+.dose .amt{font-size:21px;font-family:'Outfit',sans-serif;font-weight:300;color:var(--aqua2);margin:5px 0}
 .dose .ex{font-size:12px;color:var(--mut);line-height:1.55}
 
 .hcard{background:var(--glass);border:1px solid var(--line);border-radius:15px;padding:15px 16px;margin-bottom:10px;animation:fadeIn .3s;transition:border-color .2s,transform .2s}
@@ -135,7 +141,7 @@ textarea:focus,input:focus,select:focus{outline:none}
 .h5{display:grid;grid-template-columns:repeat(6,1fr);gap:5px}
 .h5 .c{text-align:center}
 .h5 .ck{font-size:9px;color:var(--mut2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px}
-.h5 .cv{font-size:16px;font-weight:600;font-family:'Playfair Display',serif}
+.h5 .cv{font-size:16px;font-weight:400;font-family:'Outfit',sans-serif}
 
 /* schedule */
 .task{display:flex;align-items:center;gap:13px;background:var(--panel);border:1px solid var(--line);border-radius:15px;padding:14px 15px;margin-bottom:10px;animation:fadeIn .3s;transition:.2s}
@@ -205,7 +211,7 @@ textarea:focus,input:focus,select:focus{outline:none}
 .rcard-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px}
 .rcard-param{background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:11px;padding:10px 8px;text-align:center}
 .rcard-param .rp-label{font-size:9px;color:var(--mut2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;font-family:'DM Mono',monospace}
-.rcard-param .rp-value{font-size:20px;font-weight:600;font-family:'Playfair Display',serif;margin-bottom:3px}
+.rcard-param .rp-value{font-size:20px;font-weight:400;font-family:'Outfit',sans-serif;margin-bottom:3px}
 .rcard-param .rp-badge{display:inline-block;font-size:8px;padding:2px 7px;border-radius:4px;letter-spacing:1px;font-family:'DM Mono',monospace;font-weight:600}
 .rcard-param .rp-conf{font-size:9px;margin-top:3px;font-family:'DM Mono',monospace;letter-spacing:.5px;opacity:.85}
 .rcard-conf-note{font-size:10.5px;color:var(--mut);line-height:1.45;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-bottom:10px}
@@ -213,7 +219,7 @@ textarea:focus,input:focus,select:focus{outline:none}
 .rcard-dose .rd-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
 .rcard-dose .rd-name{font-size:12.5px;font-weight:600}
 .rcard-dose .rd-badge{font-size:8px;padding:2px 7px;border-radius:4px;letter-spacing:1px;font-family:'DM Mono',monospace}
-.rcard-dose .rd-amt{font-size:17px;font-family:'Playfair Display',serif;color:var(--aqua2);margin:4px 0}
+.rcard-dose .rd-amt{font-size:17px;font-family:'Outfit',sans-serif;font-weight:300;color:var(--aqua2);margin:4px 0}
 .rcard-dose .rd-ex{font-size:11px;color:var(--mut);line-height:1.5}
 .rcard-save{width:100%;margin-top:10px;background:linear-gradient(135deg,var(--teal1),var(--teal2));color:#fff;border:none;border-radius:11px;padding:11px;font-weight:600;font-size:13px;cursor:pointer;font-family:inherit;transition:.2s;box-shadow:0 6px 18px -8px var(--teal2)}
 .rcard-save:hover{filter:brightness(1.1)}
@@ -253,6 +259,45 @@ textarea:focus,input:focus,select:focus{outline:none}
   body::before,body::after,.logo .ic,.ring-fill,.swim-ic.safe,.rcard-ok{animation:none}
   .tab .wv{animation:none}
   *{transition-duration:.01ms!important}
+}
+
+/* ── v4.6.0 "Deep Glass" components ─────────────────────────────────
+   Liquid health gauge, capsule readings, hero layout, wordmark accent.
+   Delete this block + the atmosphere block above to revert the theme. ── */
+.logo .ic{background:none;box-shadow:none;border-radius:0}
+.ti b{font-weight:600;background:linear-gradient(90deg,#6fe3ff,#3ecfb2);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.gwrap{position:relative;width:150px;height:150px;flex-shrink:0;margin:0 auto}
+.gwrap svg{width:100%;height:100%;display:block;filter:drop-shadow(0 16px 26px rgba(2,18,29,.45))}
+.gwave{animation:slosh 6s linear infinite}
+.gwave.g2{animation-duration:9s;opacity:.5}
+.gwave.g3{animation-duration:12s;opacity:.3}
+@keyframes slosh{to{transform:translateX(-200px)}}
+.gnum{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.gnum .n{font-size:40px;font-weight:200;line-height:1;color:#fff;text-shadow:0 2px 18px rgba(2,16,25,.6)}
+.gnum .l{font-family:'DM Mono',monospace;font-size:7.5px;letter-spacing:2.4px;color:rgba(255,255,255,.72);margin-top:4px}
+.heroRow{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+.heroSide{flex:1;min-width:190px}
+.swimPill{display:inline-flex;align-items:center;gap:9px;border-radius:999px;padding:7px 15px;font-size:13.5px;font-weight:400;margin-bottom:10px;border:1px solid}
+.swimPill .dot{width:7px;height:7px;border-radius:50%;animation:breathe 2.8s ease-in-out infinite}
+@keyframes breathe{50%{opacity:.35}}
+.statsRow{display:flex;margin-top:12px;border-top:1px solid rgba(255,255,255,.09);padding-top:11px}
+.statsRow .s{flex:1;min-width:0}
+.statsRow .s+.s{border-left:1px solid rgba(255,255,255,.09);padding-left:12px;margin-left:12px}
+.statsRow .sv{font-size:15.5px;font-weight:400;color:var(--txt);white-space:nowrap}
+.statsRow .sk{font-family:'DM Mono',monospace;font-size:7.5px;letter-spacing:1.4px;color:var(--mut2);margin-top:2px;text-transform:uppercase}
+.caps .crow{display:flex;align-items:center;gap:11px;padding:8px 2px}
+.caps .crow+.crow{border-top:1px solid rgba(255,255,255,.07)}
+.caps .ck{width:42px;font-family:'DM Mono',monospace;font-size:9.5px;letter-spacing:1.2px;color:var(--mut)}
+.caps .ctube{flex:1;height:8px;border-radius:5px;background:rgba(255,255,255,.07);position:relative;overflow:hidden}
+.caps .cideal{position:absolute;top:0;bottom:0;background:rgba(92,200,160,.16);border-radius:5px}
+.caps .cfill{position:absolute;left:0;top:0;bottom:0;border-radius:5px;animation:fillx 1.2s cubic-bezier(.2,.8,.2,1) both}
+.caps .cfill::after{content:'';position:absolute;top:0;bottom:0;right:0;width:12px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.45));border-radius:5px}
+@keyframes fillx{from{width:0!important}}
+.caps .cv{width:50px;text-align:right;font-size:14.5px;font-weight:400}
+.caps .cd{width:16px;text-align:right;font-size:11px}
+@media(prefers-reduced-motion:reduce){
+  html::before,.bubble,.gwave,.swimPill .dot{animation:none}
+  .bubble{display:none}
 }</style>
 </head>
 <body>
@@ -260,8 +305,8 @@ textarea:focus,input:focus,select:focus{outline:none}
   <div class="hd"><div class="hdin">
     <div class="hrow">
       <div class="logo">
-        <div class="ic"><svg width="22" height="13" viewBox="0 0 48 26" aria-label="Clarity"><path d="M2 8 q6 -7 12 0 t12 0 t12 0 t12 0" fill="none" stroke="#eafcfb" stroke-width="3" stroke-linecap="round"/><path d="M2 17 q6 -7 12 0 t12 0 t12 0 t12 0" fill="none" stroke="#aef2ee" stroke-width="3" stroke-linecap="round" opacity=".7"/></svg></div>
-        <div><div class="ti serif">Clarity</div><div class="sub">Pool Co-Pilot</div></div>
+        <div class="ic"><svg width="34" height="34" viewBox="0 0 48 48" aria-label="Clarity"><defs><linearGradient id="logoDrop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6fe3ff"/><stop offset="1" stop-color="#0d7390"/></linearGradient><clipPath id="logoDropClip"><path d="M24 4C24 4 9.5 19 9.5 30a14.5 14.5 0 0 0 29 0C38.5 19 24 4 24 4Z"/></clipPath></defs><path d="M24 4C24 4 9.5 19 9.5 30a14.5 14.5 0 0 0 29 0C38.5 19 24 4 24 4Z" fill="url(#logoDrop)"/><g clip-path="url(#logoDropClip)"><path d="M4 27 q5 -4.5 10 0 t10 0 t10 0 t10 0 V48 H4 Z" fill="rgba(234,252,251,.30)"/><path d="M4 32 q5 -4.5 10 0 t10 0 t10 0 t10 0 V48 H4 Z" fill="rgba(234,252,251,.45)"/></g><ellipse cx="18.5" cy="15.5" rx="3.4" ry="5" fill="rgba(255,255,255,.5)" transform="rotate(-24 18.5 15.5)"/></svg></div>
+        <div><div class="ti serif">clar<b>i</b>ty</div><div class="sub">Pool Co-Pilot</div></div>
       </div>
       <button class="gear mono" id="gearBtn">⚙ <span id="gLabel">15,000g</span></button>
     </div>
@@ -285,14 +330,14 @@ textarea:focus,input:focus,select:focus{outline:none}
       </div>
       </div>
     </div>
-    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v4.5.0</span></div>
+    <div class="foot">📷 snap or 📁 upload a photo · Enter to send · <span class="ver-tag">v4.6.0</span></div>
   </div>
 </div>
 
 <!-- sign-in gate -->
 <div id="authGate" style="position:fixed;inset:0;z-index:9999;background:linear-gradient(160deg,#0b1a26,#081420);display:none;align-items:center;justify-content:center;padding:24px">
   <div style="max-width:340px;width:100%;text-align:center;animation:fadeIn .4s ease">
-    <div style="font-family:'Playfair Display',serif;font-size:32px;color:#eafcfb;margin-bottom:6px">Clarity</div>
+    <div style="font-family:'Outfit',sans-serif;font-weight:300;letter-spacing:1px;font-size:32px;color:#eafcfb;margin-bottom:6px">clarity</div>
     <div style="color:rgba(255,255,255,.45);font-size:14px;margin-bottom:30px;line-height:1.55">Your personal pool co-pilot.<br>Sign in to sync your pool across devices.</div>
     <button id="signInBtn" style="width:100%;padding:14px;border-radius:13px;border:1px solid rgba(120,200,225,.3);background:rgba(255,255,255,.06);color:#eafcfb;font-size:15px;font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px">
       <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.71-1.57 2.68-3.89 2.68-6.62z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.34 0-4.32-1.58-5.03-3.7H.96v2.33A9 9 0 0 0 9 18z"/><path fill="#FBBC05" d="M3.97 10.72a5.4 5.4 0 0 1 0-3.44V4.95H.96a9 9 0 0 0 0 8.1z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.59A8.99 8.99 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/></svg>
@@ -656,7 +701,7 @@ function renderSetup(){
 
       <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
         <button onclick="fbAuth.signOut()" style="background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--mut);font-size:11px;font-family:inherit;padding:7px 14px;border-radius:9px;cursor:pointer">Sign out</button>
-        <span style="font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v4.5.0</span>
+        <span style="font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v4.6.0</span>
       </div>
     </div>`;
 
@@ -890,15 +935,48 @@ function buildSparkline(key,w,h){
   return svg;
 }
 
-/* v4.5.0 — animated health ring (presentation only; the score math is unchanged) */
-function healthRing(score,color){
-  const off=score==null?213.6:213.6*(1-Math.max(0,Math.min(100,score))/100);
-  return `<svg width="88" height="88" viewBox="0 0 88 88" style="display:block;margin:0 auto" role="img" aria-label="Pool health ${score==null?'no data':score+' of 100'}">
-    <circle cx="44" cy="44" r="34" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="7"/>
-    <circle class="ring-fill" cx="44" cy="44" r="34" fill="none" stroke="${color}" stroke-width="7" stroke-linecap="round"
-      stroke-dasharray="213.6" stroke-dashoffset="${off.toFixed(1)}" transform="rotate(-90 44 44)" style="filter:drop-shadow(0 0 5px ${color})"/>
-    <text x="44" y="52" text-anchor="middle" font-family="Playfair Display,serif" font-weight="600" font-size="26" fill="${score==null?'rgba(255,255,255,.24)':'rgba(255,255,255,.92)'}">${score==null?'—':score}</text>
-  </svg>`;
+/* v4.6.0 — liquid-fill health gauge (presentation only; the score math is unchanged) */
+function healthGauge(score,color){
+  const s=score==null?null:Math.max(0,Math.min(100,score));
+  const top=s==null?200:100+83-166*(s/100); // waterline y inside the r=83 circle
+  const wave=(y,cls,fill)=>`<path class="gwave ${cls}" fill="${fill}" d="M0 ${y.toFixed(1)} Q25 ${(y-8).toFixed(1)} 50 ${y.toFixed(1)} T100 ${y.toFixed(1)} T150 ${y.toFixed(1)} T200 ${y.toFixed(1)} T250 ${y.toFixed(1)} T300 ${y.toFixed(1)} T350 ${y.toFixed(1)} T400 ${y.toFixed(1)} V200 H0 Z"/>`;
+  const glossY=Math.max(22,top-9);
+  return `<div class="gwrap"><svg viewBox="0 0 200 200" role="img" aria-label="Pool health ${s==null?'no data':s+' of 100'}">
+    <defs>
+      <clipPath id="hgClip"><circle cx="100" cy="100" r="83"/></clipPath>
+      <linearGradient id="hgWater" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#6fe3ff" stop-opacity=".95"/><stop offset="1" stop-color="#0b6a8b"/>
+      </linearGradient>
+    </defs>
+    <circle cx="100" cy="100" r="90" fill="none" stroke="rgba(255,255,255,.10)" stroke-width="1"/>
+    <circle cx="100" cy="100" r="83" fill="rgba(255,255,255,.05)" stroke="rgba(255,255,255,.16)" stroke-width="1.4"/>
+    ${s==null?'':`<g clip-path="url(#hgClip)">${wave(top+2,'g3','#2a9d8f')}${wave(top-1,'g2','#3ecfb2')}${wave(top+1,'','url(#hgWater)')}<ellipse cx="70" cy="${glossY.toFixed(1)}" rx="30" ry="8" fill="rgba(255,255,255,.13)" transform="rotate(-16 70 ${glossY.toFixed(1)})"/></g>`}
+    <circle cx="100" cy="100" r="83" fill="none" stroke="${s==null?'rgba(255,255,255,.14)':color}" stroke-opacity=".5" stroke-width="1.4"/>
+  </svg>
+  <div class="gnum"><div class="n"${s==null?' style="color:rgba(255,255,255,.25)"':''}>${s==null?'—':s}</div><div class="l">WATER HEALTH</div></div></div>`;
+}
+
+/* v4.6.0 — capsule reading row: ideal band + fill + trend arrow (all from real data) */
+function capsuleHTML(v,k){
+  const r=IDEAL[k],span=r.max-r.min,pmin=r.min-span*.4,pmax=r.max+span*.4;
+  const pct=x=>Math.max(0,Math.min(100,(x-pmin)/(pmax-pmin)*100));
+  const st=statusOf(v,k);
+  const fill=st==='OK'?'linear-gradient(90deg,rgba(111,227,255,.6),#6fe3ff)':st==='LOW'?'linear-gradient(90deg,rgba(232,185,106,.55),var(--amber))':'linear-gradient(90deg,rgba(236,138,114,.55),var(--coral))';
+  const glow=st==='OK'?'rgba(111,227,255,.4)':st==='LOW'?'rgba(232,185,106,.35)':'rgba(236,138,114,.35)';
+  const seq=S.history.filter(e=>e[k]!=null);
+  let arrow='',ac='var(--mut2)';
+  if(seq.length>=2&&v!=null){
+    const d=+(v-seq[1][k]).toFixed(2), mid=(r.min+r.max)/2;
+    arrow=d>0?'↗':d<0?'↘':'→';
+    ac=d===0?'var(--mut2)':(Math.abs(v-mid)<Math.abs(seq[1][k]-mid)?'var(--green)':(st==='OK'?'var(--mut)':'var(--coral)'));
+  }
+  return `<div class="crow">
+    <span class="ck" title="${r.label}">${r.short}</span>
+    <div class="ctube"><span class="cideal" style="left:${pct(r.min).toFixed(1)}%;width:${(pct(r.max)-pct(r.min)).toFixed(1)}%"></span>
+      ${v!=null?`<span class="cfill" style="width:${pct(v).toFixed(1)}%;background:${fill};box-shadow:0 0 12px ${glow}"></span>`:''}</div>
+    <span class="cv" style="color:${v!=null?color(v,k):'rgba(255,255,255,.18)'}">${v??'—'}</span>
+    <span class="cd" style="color:${ac}">${arrow}</span>
+  </div>`;
 }
 
 /* v4.5.0 — one-tap CSV export of the full test history (deterministic, no AI) */
@@ -972,19 +1050,24 @@ function renderDash(b){
 
   let html=`<div class="bin">`;
 
-  // Top row: Health Score ring + Swim Status (v4.5.0 — same math, new presentation)
+  // Hero: liquid gauge + swim verdict + real stats (v4.6.0 — same math, new presentation)
   const scoreWord=!hasData?'':score>=90?'Pristine':score>=75?'Healthy':score>=50?'Fair':'Needs work';
-  html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
-    <div class="formcard" style="text-align:center;padding:14px 10px;margin:0">
-      ${healthRing(hasData?score:null,hasData?scoreColor:'var(--mut2)')}
-      <div class="mono" style="font-size:9px;color:var(--mut2);letter-spacing:1.5px;text-transform:uppercase;margin-top:5px">Pool Health</div>
-      ${scoreWord?`<div style="font-size:11px;font-weight:600;color:${scoreColor};margin-top:2px">${scoreWord}${measured<KEYS.length?` <span style="color:var(--mut2);font-weight:400">· ${measured}/${KEYS.length} measured</span>`:''}</div>`:''}
+  const heroDecay=_fcDecayRate();
+  const heroScore=predictionScore();
+  const swimBg=swimStatus==='safe'?'rgba(62,207,178,.13)':swimStatus==='caution'?'rgba(240,192,64,.12)':swimStatus==='danger'?'rgba(236,138,114,.12)':'rgba(255,255,255,.06)';
+  const swimBd=swimStatus==='safe'?'rgba(62,207,178,.34)':swimStatus==='caution'?'rgba(240,192,64,.3)':swimStatus==='danger'?'rgba(236,138,114,.3)':'var(--line)';
+  html+=`<div class="formcard" style="margin-bottom:12px"><div class="heroRow">
+    ${healthGauge(hasData?score:null,hasData?scoreColor:'var(--mut2)')}
+    <div class="heroSide">
+      <span class="swimPill" style="background:${swimBg};border-color:${swimBd};color:${swimColor}"><span class="dot" style="background:${swimColor};box-shadow:0 0 12px ${swimColor}"></span>${swimLabel}</span>
+      <div style="font-size:12.5px;color:var(--mut);line-height:1.55">${hasData?`${scoreWord}${measured<KEYS.length?` · ${measured} of ${KEYS.length} measured`:''} · last tested <span style="color:${freshCol}">${daysSince.toLowerCase()}</span>`:'No tests yet — scan a strip in Chat or enter readings in Chemistry.'}</div>
+      <div class="statsRow">
+        <div class="s"><div class="sv">${heroDecay?heroDecay.rate.toFixed(2):'—'}</div><div class="sk">ppm/day decay</div></div>
+        <div class="s"><div class="sv">${heroScore.tested?heroScore.hit+'/'+heroScore.tested:'—'}</div><div class="sk">forecasts held</div></div>
+        <div class="s"><div class="sv">${S.history.length||'—'}</div><div class="sk">tests logged</div></div>
+      </div>
     </div>
-    <div class="formcard" style="text-align:center;padding:14px 10px;margin:0;display:flex;flex-direction:column;justify-content:center">
-      <div class="swim-ic ${swimStatus==='safe'?'safe':''}" style="font-size:34px;line-height:1.15">${swimIcon}</div>
-      <div style="font-size:11.5px;color:${swimColor};font-weight:600;margin-top:8px">${swimLabel}</div>
-    </div>
-  </div>`;
+  </div></div>`;
   
   // Show reason if not safe
   if(swimReason){
@@ -1009,22 +1092,11 @@ function renderDash(b){
   html+=renderPoolModelCard();
 
   if(hasData){
-    // Current readings
-    html+=`<div class="mono" style="font-size:9px;color:var(--mut2);letter-spacing:1.5px;text-transform:uppercase;margin-bottom:8px;margin-top:16px">Current Readings</div>`;
-    html+=`<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:16px">`;
-    KEYS.forEach(k=>{
-      const v=latest[k];
-      const c=color(v,k);
-      const r=IDEAL[k];
-      const st=statusOf(v,k);
-      const badge=st==='OK'?'':st==='LOW'?' ↓':' ↑';
-      html+=`<div class="formcard" style="text-align:center;padding:12px 8px 10px;margin:0">
-        <div class="mono" style="font-size:9px;color:var(--mut2);letter-spacing:1px">${r.short}</div>
-        <div style="font-size:22px;font-weight:700;color:${c};font-family:'Playfair Display',serif;margin:4px 0">${v??'—'}${badge}</div>
-        <div style="font-size:9px;color:var(--mut2)">${r.min}–${r.max}${r.unit?' '+r.unit:''}</div>
-        ${gaugeHTML(v,k)}
-      </div>`;
-    });
+    // Current readings — capsule rows (v4.6.0; same values, same status logic)
+    const idealN=KEYS.filter(k=>statusOf(latest[k],k)==='OK').length;
+    html+=`<div class="formcard caps" style="margin-bottom:16px;margin-top:16px;padding:15px 17px">
+      <div class="mono" style="font-size:9px;letter-spacing:1.5px;text-transform:uppercase;margin-bottom:6px;display:flex;justify-content:space-between"><span style="color:var(--mut2)">Current readings</span><span style="color:var(--green);letter-spacing:.4px">${idealN} of ${KEYS.length} ideal</span></div>`;
+    KEYS.forEach(k=>{html+=capsuleHTML(latest[k],k);});
     html+=`</div>`;
 
     // Sparklines for key params
@@ -2218,7 +2290,7 @@ function renderPoolModelCard(){
     if(sc.open.length){
       const p=sc.open[0];
       html+=`<div style="font-size:11.5px;color:var(--aqua);margin-top:8px;line-height:1.45">🔮 ${p.claim}.${p.daysToMin?` At this rate FC reaches the ${IDEAL.chlorine.min} ppm minimum in ~${Math.round(p.daysToMin)} day${Math.round(p.daysToMin)===1?'':'s'}.`:''}</div>
-        <div style="font-size:9px;color:var(--mut2);margin-top:2px">A forecast Clarity will check against your next test.</div>`;
+        <div style="font-size:9px;color:var(--mut2);margin-top:2px">Your next test grades this forecast.</div>`;
     }else if(!_fcDecayRate()){
       html+=`<div style="font-size:11px;color:var(--mut2);margin-top:2px;line-height:1.4">No chlorine forecast yet — I need a couple of tests with no chlorine added in between before I can predict how fast it fades.</div>`;
     }
@@ -2588,6 +2660,21 @@ $('uploadIn').onchange=async e=>{const f=e.target.files[0];e.target.value='';if(
 $('tSave').onclick=saveTask;
 $('tDelete').onclick=()=>{if(S.editTask&&confirm('Delete this task?')){S.tasks=S.tasks.filter(x=>x.id!==S.editTask);persist();closeScrim('taskScrim');render();checkTaskNotifications(true);}};
 $('taskScrim').onclick=e=>{if(e.target.id==='taskScrim')closeScrim('taskScrim')};
+
+/* v4.6.0 — ambient bubbles (purely visual; skipped under reduced-motion) */
+(function(){
+  if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+  for(let i=0;i<11;i++){
+    const b=document.createElement('div');b.className='bubble';
+    const s=3+Math.random()*9;
+    b.style.width=b.style.height=s+'px';
+    b.style.left=(4+Math.random()*92)+'vw';
+    b.style.animationDuration=(11+Math.random()*13)+'s';
+    b.style.animationDelay=(-Math.random()*18)+'s';
+    b.style.opacity=.15+Math.random()*.28;
+    document.body.appendChild(b);
+  }
+})();
 
 /* ── Auth gate & boot ──
    The app only renders after sign-in. While signed out, the gate overlay

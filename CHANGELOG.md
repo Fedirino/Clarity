@@ -4,6 +4,37 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [4.6.0] — 2026-07-01
+
+### Changed — "Deep Glass" theme: liquid gauge, capsule readings, new logo — Minor Release
+
+**Overview**: The winning design from the mockup round, ported into the real app. Clarity now lives underwater: a deep-water gradient with drifting light rays, glow blobs, and ambient rising bubbles; a **liquid-fill health gauge** with sloshing waves replaces the ring; readings became slim **capsule rows** with ideal-range bands and trend arrows; and Clarity has a new **"Depth drop" logo** — a droplet with the waterline inside it. The original wave-crest tab bar stays, per the owner. No chemistry, scanning, or sync logic changed.
+
+### Added
+- **Liquid health gauge**: the dashboard hero card fills with animated water to the health score (three wave layers at different speeds), score number floating above. Same deterministic score math as always — only the presentation changed.
+- **Hero stats row**: FC decay (learned rate), forecast track record, and tests logged — all pulled from the existing deterministic model; shows "—" when there isn't enough data rather than inventing a number.
+- **Capsule readings**: each parameter is a row with an ideal-range band, a glowing fill (aqua in range / amber low / coral high), the value, and a trend arrow vs the previous test (green when moving toward ideal).
+- **Ambient bubbles**: 11 soft bubbles rise slowly behind the UI (pure CSS animation, pointer-events none, disabled under `prefers-reduced-motion`).
+
+### Changed
+- **New logo — "Depth drop"**: gradient droplet with the waterline clipped inside + specular highlight; header wordmark is now lowercase `clarity` with a gradient "i"; SVG favicon updated to match. (PNG app icons for installed PWAs still show the old twin-waves circle — regenerating those is a follow-up.)
+- **Typography**: app-wide switch from DM Sans/Playfair Display to **Outfit** (light weights for display numbers) + DM Mono for micro-labels.
+- **Atmosphere**: deep-water vertical gradient background, conic light rays swaying from the surface, two drifting glow blobs.
+- **Glass polish**: cards use a softer white glass gradient, neutral 13% white borders, 22px radius, deeper shadow.
+- Forecast caption tightened: "Your next test grades this forecast."
+
+### Truthfulness Notes
+- The hero's insight line is assembled from real computed values (score word, measured count, last-test freshness) — no generated sentences are hardcoded.
+- Stats show "—" until the model has real data (e.g. decay needs 2+ chlorine-free intervals).
+
+### Version
+- Bumped 4.5.0 → 4.6.0. Both in-app version strings updated.
+
+### Release note
+- Design mockup HTML files from the exploration round live untracked in the local folder only (`mockup-*.html`) — they are not committed and not deployed.
+
+---
+
 ## [4.5.0] — 2026-07-01
 
 ### Added — "Glass & Water" visual overhaul + trend deltas, CSV export — Minor Release
