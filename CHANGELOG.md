@@ -4,6 +4,31 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [4.6.1] — 2026-07-05
+
+### Fixed — backend pass: weather backoff, pH truth alignment, sync + prompt-cost fixes — Patch Release
+
+**Overview**: No visual changes. Six correctness fixes found in a full-app review, plus prompt caching to cut per-message API cost. `functions/index.js` untouched — no functions redeploy needed for this release.
+
+### Fixed
+- **Weather retry loop**: a failed forecast fetch left the cache empty, so every dashboard render refetched immediately — a render→fail→render loop on a flaky connection. Failed fetches now back off for 5 minutes; the ↻ Refresh button still forces an immediate retry.
+- **pH truth mismatch**: the strip-reading scale in the system prompt said "OK 7.2–7.8" while the app's gauges and dosing flag HIGH above 7.6 — chat could bless a 7.7 that the results card flagged. The prompt now judges pH against Clarity's 7.2–7.6 target so words and gauges can't disagree.
+- **Strip instruction sent twice**: the ~1,200-char reading instruction went to the API in both the system prompt and the user turn on every scan (and the two copies had already drifted apart). Now sent once, from the single `STRIP_IMAGE_INSTRUCTION` constant, riding with the image.
+- **notifyTime cloud sync**: the task-notification hour was saved locally but never pushed to Firestore, so it didn't follow the account across devices. Now synced both directions.
+- **Stale error copy**: "Check Netlify function logs" → Cloud Function wording (the Netlify era ended back in v3.x).
+
+### Changed
+- **Prompt caching**: the static system prompt (role + AquaChek card scale + reading rules) is now sent as a cached block (`cache_control: {type:"ephemeral"}`); only the dynamic tail (pool size, profile, notes, weather, model, insights, history) is re-processed each message. Identical content, split in two — materially cheaper and faster for every message after the first in a session. The Cloud Function forwards the body unchanged, so no server change was needed.
+- **Version single-source**: new `APP_VERSION` const drives both the footer tag and the settings-panel version string, so the two can never drift again. Releases now bump one line.
+
+### Truthfulness Notes
+- The pH fix is a truthfulness fix: the model's stated status for a reading now always matches what the app's own gauges show for the same number.
+
+### Version
+- Bumped 4.6.0 → 4.6.1 (`APP_VERSION` in `index.html`).
+
+---
+
 ## [4.6.0] — 2026-07-01
 
 ### Changed — "Deep Glass" theme: liquid gauge, capsule readings, new logo — Minor Release
