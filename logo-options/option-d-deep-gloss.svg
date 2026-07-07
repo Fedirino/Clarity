@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Clarity icon — Deep Gloss">
+  <defs>
+    <linearGradient id="d-bg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0f2536"/><stop offset="1" stop-color="#06111b"/></linearGradient>
+    <radialGradient id="d-glow" cx="50%" cy="24%" r="70%"><stop offset="0" stop-color="#134560" stop-opacity=".9"/><stop offset="1" stop-color="#06111b" stop-opacity="0"/></radialGradient>
+    <radialGradient id="d-drop" cx="40%" cy="26%" r="86%">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="13%" stop-color="#eafdff"/>
+      <stop offset="35%" stop-color="#83e0e4"/>
+      <stop offset="60%" stop-color="#3aa9c8"/>
+      <stop offset="83%" stop-color="#136a89"/>
+      <stop offset="100%" stop-color="#062c3e"/>
+    </radialGradient>
+    <radialGradient id="d-sheen" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#ffffff" stop-opacity=".9"/><stop offset="100%" stop-color="#ffffff" stop-opacity="0"/></radialGradient>
+    <radialGradient id="d-base" cx="50%" cy="86%" r="46%"><stop offset="0" stop-color="#03212f" stop-opacity=".6"/><stop offset="100%" stop-color="#03212f" stop-opacity="0"/></radialGradient>
+    <clipPath id="d-clip"><path d="M256 78C292 148 388 274 388 352C388 424 330 472 256 472C182 472 124 424 124 352C124 274 220 148 256 78Z"/></clipPath>
+    <filter id="d-sh" x="-40%" y="-40%" width="180%" height="180%"><feDropShadow dx="0" dy="16" stdDeviation="18" flood-color="#010810" flood-opacity=".6"/></filter>
+  </defs>
+  <rect width="512" height="512" rx="114" fill="url(#d-bg)"/>
+  <rect width="512" height="512" rx="114" fill="url(#d-glow)"/>
+  <path d="M256 78C292 148 388 274 388 352C388 424 330 472 256 472C182 472 124 424 124 352C124 274 220 148 256 78Z" fill="url(#d-drop)" filter="url(#d-sh)"/>
+  <g clip-path="url(#d-clip)">
+    <rect x="84" y="300" width="344" height="200" fill="url(#d-base)"/>
+    <path d="M92 372 q40 -22 80 0 t80 0 t80 0 t80 0 t80 0" fill="none" stroke="#052b3a" stroke-width="14" stroke-linecap="round" opacity=".33"/>
+    <path d="M92 348 q40 -22 80 0 t80 0 t80 0 t80 0 t80 0" fill="none" stroke="#d9fbff" stroke-width="7" stroke-linecap="round" opacity=".25"/>
+    <ellipse cx="212" cy="200" rx="96" ry="120" fill="url(#d-sheen)" opacity=".5" transform="rotate(-18 212 200)"/>
+  </g>
+  <ellipse cx="182" cy="172" rx="16" ry="24" fill="#ffffff" opacity=".85"/>
+</svg>

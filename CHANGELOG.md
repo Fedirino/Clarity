@@ -4,6 +4,26 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [4.7.0] — 2026-07-07
+
+### Changed — finalized brand icon: "Minimal Monoline" droplet — Minor Release
+
+**Overview**: Cleaned up and professionalized the app icon while keeping the water-droplet idea intact. The new mark is a crisp outlined droplet with a single clean waterline, drawn in the app's Deep Glass palette (navy tile, aqua `#5bc6dc` / `#7fe3e0`, Outfit-era look). Every icon asset was regenerated from one source. Hosting-only — no functions change.
+
+### Added
+- **`icon.svg`** — master vector for the icon (the "Minimal Monoline" option on a dark tile, drop scaled to 90% and centered for even margins and PWA maskable safety). Single source of truth for the raster exports.
+
+### Changed
+- **Inline SVG favicon** (`index.html`): retuned to the finalized palette as a bold solid droplet + waterline that stays legible down to 16px in a browser tab (a thin outline would disappear at that size).
+- **App-tile icons regenerated** from the new design — `apple-touch-icon.png` (180), `icon-192.png`, `icon-512.png`: full-bleed opaque dark tile with the outlined droplet, sized for correct iOS / Android icon masking. Closes the standing "PNG PWA icons still show the old logo" open item.
+- **`favicon-32.png`** regenerated as the bold solid-droplet variant on a transparent background.
+- Design explorations kept under `logo-options/` (options A–D) for future reference.
+
+### Version
+- Bumped 4.6.1 → 4.7.0 (`APP_VERSION` in `index.html`).
+
+---
+
 ## [4.6.1] — 2026-07-05
 
 ### Fixed — backend pass: weather backoff, pH truth alignment, sync + prompt-cost fixes — Patch Release
