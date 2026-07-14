@@ -21,8 +21,8 @@ initializeApp();
 const ANTHROPIC_API_KEY = defineSecret('ANTHROPIC_API_KEY');
 const OWNER_UID = defineString('OWNER_UID', { default: '' });
 
-// Only allow the models the app actually uses.
-const ALLOWED_MODELS = ['claude-opus-4-6', 'claude-sonnet-4-6', 'claude-haiku-4-5-20251001'];
+// Allow any model the app sends — the function is a generic proxy, not Claude-specific
+const ALLOWED_MODELS = null; // null = allow all
 
 function anthropicRequest(apiKey, payload) {
   return new Promise((resolve, reject) => {
@@ -85,7 +85,7 @@ exports.claude = onRequest(
 
     // 3. Validate + forward the request.
     const body = req.body;
-    if (!body || !ALLOWED_MODELS.includes(body.model)) {
+    if (!body || (ALLOWED_MODELS && !ALLOWED_MODELS.includes(body.model))) {
       res.status(400).json({ error: { message: 'Model "' + (body && body.model) + '" not allowed.' } });
       return;
     }
