@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Clarity">
+  <defs>
+    <linearGradient id="m-bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0e2233"/><stop offset="1" stop-color="#06111b"/>
+    </linearGradient>
+    <linearGradient id="m-fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5bc6dc" stop-opacity=".2"/>
+      <stop offset="1" stop-color="#0d7390" stop-opacity=".42"/>
+    </linearGradient>
+    <clipPath id="m-clip"><path d="M256 78C292 148 388 274 388 352C388 424 330 472 256 472C182 472 124 424 124 352C124 274 220 148 256 78Z"/></clipPath>
+  </defs>
+  <rect width="512" height="512" rx="114" fill="url(#m-bg)"/>
+  <g transform="translate(25.6 8.5) scale(0.9)">
+    <path d="M256 78C292 148 388 274 388 352C388 424 330 472 256 472C182 472 124 424 124 352C124 274 220 148 256 78Z" fill="url(#m-fill)"/>
+    <g clip-path="url(#m-clip)">
+      <path d="M92 322 q40 -30 80 0 t80 0 t80 0 t80 0 t80 0" fill="none" stroke="#7fe3e0" stroke-width="15" stroke-linecap="round"/>
+      <path d="M92 360 q40 -26 80 0 t80 0 t80 0 t80 0 t80 0" fill="none" stroke="#5bc6dc" stroke-width="9" stroke-linecap="round" opacity=".45"/>
+    </g>
+    <path d="M256 78C292 148 388 274 388 352C388 424 330 472 256 472C182 472 124 424 124 352C124 274 220 148 256 78Z" fill="none" stroke="#7fe3e0" stroke-width="10"/>
+    <circle cx="194" cy="184" r="11" fill="#eafcff" opacity=".75"/>
+  </g>
+</svg>
