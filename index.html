@@ -45,8 +45,15 @@ textarea:focus,input:focus,select:focus{outline:none}
 .hd{padding:max(16px,env(safe-area-inset-top)) 20px 0;flex-shrink:0;
   background:linear-gradient(180deg,rgba(8,20,32,.9),transparent);
   border-bottom:1px solid var(--line);backdrop-filter:blur(10px)}
+.keyBar{display:flex;align-items:center;justify-content:space-between;margin:10px 14px 4px;padding:8px 12px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;transition:0.25s}
+.keyBar .lbl{font-size:11px;color:var(--mut);font-family:'DM Mono',monospace;margin-right:8px}
+.keyBar input{width:200px;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:4px;padding:5px 8px;color:var(--txt);font-size:12px;font-family:'DM Mono',monospace;transition:0.2s}
+.keyBar input:focus{border-color:var(--aqua);outline:none}
+.keyBar .btngrp{display:flex;gap:6px}
+.keyBar .btngrp .b{font-size:10px;padding:6px 9px;border-radius:4px;border:none;cursor:pointer;transition:0.2s;font-family:'DM Mono',monospace}
+.keyBar .btngrp .b:hover{filter:brightness(1.15)}
 .hdin{max-width:660px;margin:0 auto}
-.hrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+(.hrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .logo{display:flex;align-items:center;gap:11px}
 .logo .ic{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--teal1),var(--teal2));
   display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 6px 18px -4px rgba(13,115,144,.6)}
@@ -55,6 +62,19 @@ textarea:focus,input:focus,select:focus{outline:none}
 .gear{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:7px 13px;color:var(--mut);font-size:11px;cursor:pointer;transition:.2s}
 .gear:hover{color:var(--txt);border-color:var(--line2)}
 
+/* tab pills */
+.rowwrap{display:flex;justify-content:center;padding-bottom:14px}
++
++/* Key Input HTML */
++<div id="keyBar" class="keyBar" style="display:none">
++  <span class="lbl">🔑 OpenRouter Key:</span>
++  <input id="openkey" type="password" placeholder="o...re...y...">
++  <div class="btngrp">
++    <button id="clearKeyBtn" class="b">✕</button>
++    <button id="saveKeyBtn" class="b">✅</button>
++  </div>
++</div>
++
 /* tab pills */
 .tabs{display:flex;gap:4px;background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:13px;padding:4px;width:max-content;max-width:100%;overflow-x:auto}
 .tab{position:relative;overflow:hidden;z-index:0;background:none;border:none;cursor:pointer;padding:8px 16px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mut2);border-radius:9px;transition:.22s;white-space:nowrap;font-family:'DM Mono',monospace}
@@ -1653,10 +1673,10 @@ function logReading(read){
   persist();
 }
 
-/* ── API ── */
-const CHAT_MODEL='claude-opus-4-6'; // Reasoning, patterns, learning
-const STRIP_MODEL_GOOD='claude-sonnet-4-6'; // cheaper default for clean strip photos
-const STRIP_MODEL_HARD='claude-opus-4-6'; // fallback when the photo is hard or low-quality
+/* ── MODELS ── */
+const CHAT_MODEL='qwen/qwen3.5-9b'; // Cheap, fast chat model
+const STRIP_MODEL_PRIMARY='gpt-4o'; // Best for strip scanning (vision)
+const STRIP_MODEL_FALLBACK='gpt-4o-mini'; // Cheaper fallback for hard photos
 const STRIP_IMAGE_INSTRUCTION='This is a strip reading. The dipped strip is seated in the channel on the LEFT EDGE of the AquaChek card — the vertical column of real color pads on the far-left side, with arrows pointing right to each parameter row. READ EVERY PAD against the row its arrow points to, and give your best estimate for each WITH an honest confidence percent (0-100%). Pads may be pale/near-white (low free/total chlorine, low CYA) and blend into the white channel — read them anyway and set a lower confidence if unsure; faint is not empty. Do NOT refuse, do NOT ask to confirm the strip is there, do NOT ask for a new photo first — always produce the reading and let the confidence percent carry any uncertainty. Only give no reading if this is not a strip/card photo at all, or it is so blurred/dark you cannot even guess. End with the hidden READINGS block including the confidence object.';
 function qualityToLabel(score){
   if(score>=85) return 'excellent';
@@ -1693,9 +1713,9 @@ function assessImageQuality(canvas){
   return {score,brightness:Math.round(mean),contrast:Math.round(contrast),edge:Math.round(edgeAvg),label:qualityToLabel(score)};
 }
 function pickStripModel(q){
-  if(!q) return STRIP_MODEL_HARD;
-  if(q.score>=68 && q.contrast>=18 && q.edge>=8) return STRIP_MODEL_GOOD;
-  return STRIP_MODEL_HARD;
+  if(!q) return STRIP_MODEL_FALLBACK;
+  if(q.score>=60 && q.contrast>=18 && q.edge>=8) return STRIP_MODEL_PRIMARY;
+  return STRIP_MODEL_FALLBACK;
 }
 function qualityPrompt(q){
   if(!q) return '';
@@ -2290,19 +2310,37 @@ async function callClaude(body){
   let resp;
   let token=null;
   try{token=fbAuth.currentUser?await fbAuth.currentUser.getIdToken():null;}catch(e){}
+  const openrouterKey = localStorage.getItem('openrouter_key') || '';
   const hdrs={'Content-Type':'application/json'};
-  if(token)hdrs['Authorization']='Bearer '+token;
-  try{resp=await fetch('/api/claude',{method:'POST',headers:hdrs,body:JSON.stringify(body)});}
-  catch(e){throw new Error('Cannot reach the server. Check your connection — the AI features need the Firebase function deployed.');}
-  const text=await resp.text();
-  if(resp.status===404)throw new Error('Proxy not found. Make sure the "claude" function is deployed and the /api/claude rewrite is live (firebase deploy).');
-  if(resp.status===401||resp.status===403)throw new Error('Sign-in problem — try signing out and back in.');
-  if(!text)throw new Error(`Empty response (status ${resp.status}). Check Netlify function logs for errors.`);
-  let data;
-  try{data=JSON.parse(text);}catch(e){throw new Error(`Server returned non-JSON (status ${resp.status}): ${text.slice(0,200)}`);}
-  if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
-  if(!data.content)throw new Error(`No content in API response. Status ${resp.status}. Response: ${text.slice(0,200)}`);
-  return data.content.map(c=>c.text||'').join('').trim();
+  if(openrouterKey){
+    hdrs['Authorization'] = `Bearer ${openrouterKey}`;
+    hdrs['HTTP-Referer'] = 'https://clarity-pool.web.app';
+    hdrs['X-Title'] = 'Clarity';
+    const endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+    try{resp=await fetch(endpoint,{method:'POST',headers:hdrs,body:JSON.stringify(body)});}
+    catch(e){throw new Error('Cannot reach OpenRouter. Check your API key.');}
+    const text=await resp.text();
+    if(resp.status===401||resp.status===403)throw new Error('OpenRouter authentication failed. Check your API key.');
+    if(!text)throw new Error(`Empty response (status ${resp.status}).`);
+    let data;
+    try{data=JSON.parse(text);}catch(e){throw new Error(`OpenRouter returned non-JSON: ${text.slice(0,200)}`);}
+    if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
+    if(!data.choices||!data.choices[0])throw new Error(`No content from OpenRouter.`);
+    return data.choices[0].message.content.trim();
+  } else {
+    // Fallback: Firebase/Anthropic
+    if(token)hdrs['Authorization']='Bearer '+token;
+    try{resp=await fetch('/api/claude',{method:'POST',headers:hdrs,body:JSON.stringify(body)});}
+    catch(e){throw new Error('Cannot reach the server. Check your connection.');}
+    const text=await resp.text();
+    if(resp.status===404)throw new Error('Proxy not found. Check Firebase function deployment.');
+    if(!text)throw new Error(`Empty response (status ${resp.status}).`);
+    let data;
+    try{data=JSON.parse(text);}catch(e){throw new Error(`Server returned non-JSON: ${text.slice(0,200)}`);}
+    if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
+    if(!data.content)throw new Error(`No content in API response.`);
+    return data.content.map(c=>c.text||'').join('').trim();
+  }
 }
 
 async function sendMessage(text){
@@ -2474,6 +2512,21 @@ function renderAttachPreview(){
 }
 
 /* ── Event wiring ── */
+$('keyBar').style.display='flex'
+$('saveKeyBtn').onclick=()=>{
+  const k=$('openkey').value.trim();
+  if(!k||k.length<10){
+    alert('Key too short. Enter valid OpenRouter key.');
+    return
+  }
+  localStorage.setItem('openrouter_key',k);
+  alert('✅ Key saved. Refresh to use GPT-4o.');
+};
+$('clearKeyBtn').onclick=()=>{
+  localStorage.removeItem('openrouter_key');
+  $('openkey').value='';
+  alert('✅ Key cleared.');
+};
 $('gearBtn').onclick=()=>{S.setupOpen=!S.setupOpen;renderSetup()};
 $('sendBtn').onclick=()=>{const v=$('msgIn').value.trim();if(v||S._pendingImage)sendMessage(v)};
 $('msgIn').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();const v=$('msgIn').value.trim();if(v||S._pendingImage)sendMessage(v)}});
