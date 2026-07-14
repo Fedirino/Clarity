@@ -2304,20 +2304,42 @@ async function callClaude(body){
   const openrouterKey = localStorage.getItem('openrouter_key') || '';
   const hdrs={'Content-Type':'application/json'};
   if(openrouterKey){
-    hdrs['Authorization'] = `Bearer ${openrouterKey}`;
-    hdrs['HTTP-Referer'] = 'https://clarity-pool.web.app';
-    hdrs['X-Title'] = 'Clarity';
-    const endpoint = 'https://openrouter.ai/api/v1/chat/completions';
-    try{resp=await fetch(endpoint,{method:'POST',headers:hdrs,body:JSON.stringify(body)});}
-    catch(e){throw new Error('Cannot reach OpenRouter. Check your API key.');}
-    const text=await resp.text();
-    if(resp.status===401||resp.status===403)throw new Error('OpenRouter authentication failed. Check your API key.');
-    if(!text)throw new Error(`Empty response (status ${resp.status}).`);
-    let data;
-    try{data=JSON.parse(text);}catch(e){throw new Error(`OpenRouter returned non-JSON: ${text.slice(0,200)}`);}
-    if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
-    if(!data.choices||!data.choices[0])throw new Error(`No content from OpenRouter.`);
-    return data.choices[0].message.content.trim();
+      // Convert Anthropic-format body to OpenAI-compatible format for OpenRouter
+      const oaiBody={model:body.model,max_tokens:body.max_tokens||2000};
+      // Convert system prompt to a system message
+      const msgs=[];
+      if(body.system) msgs.push({role:'system',content:body.system});
+      // Convert messages: image format differs between Anthropic and OpenAI
+      for(const m of (body.messages||[])){
+        if(m.role==='user'&&Array.isArray(m.content)){
+          const parts=[];
+          for(const c of m.content){
+            if(c.type==='image'&&c.source){
+              parts.push({type:'image_url',image_url:{url:`data:${c.source.media_type};base64,${c.source.data}`}});
+            } else {
+              parts.push({type:c.type||'text',text:c.text});
+            }
+          }
+          msgs.push({role:'user',content:parts});
+        } else {
+          msgs.push({role:m.role,content:m.content});
+        }
+      }
+      oaiBody.messages=msgs;
+      hdrs['Authorization'] = `Bearer ${openrouterKey}`;
+      hdrs['HTTP-Referer'] = 'https://clarity-pool.web.app';
+      hdrs['X-Title'] = 'Clarity';
+      const endpoint = 'https://openrouter.ai/api/v1/chat/completions';
+      try{resp=await fetch(endpoint,{method:'POST',headers:hdrs,body:JSON.stringify(oaiBody)});}
+      catch(e){throw new Error('Cannot reach OpenRouter. Check your API key.');}
+      const text=await resp.text();
+      if(resp.status===401||resp.status===403)throw new Error('OpenRouter authentication failed. Check your API key.');
+      if(!text)throw new Error(`Empty response (status ${resp.status}).`);
+      let data;
+      try{data=JSON.parse(text);}catch(e){throw new Error(`OpenRouter returned non-JSON: ${text.slice(0,200)}`);}
+      if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
+      if(!data.choices||!data.choices[0])throw new Error(`No content from OpenRouter.`);
+      return data.choices[0].message.content.trim();
   } else {
     // Fallback: Firebase/Anthropic
     if(token)hdrs['Authorization']='Bearer '+token;
