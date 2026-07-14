@@ -53,7 +53,7 @@ textarea:focus,input:focus,select:focus{outline:none}
 .keyBar .btngrp .b{font-size:10px;padding:6px 9px;border-radius:4px;border:none;cursor:pointer;transition:0.2s;font-family:'DM Mono',monospace}
 .keyBar .btngrp .b:hover{filter:brightness(1.15)}
 .hdin{max-width:660px;margin:0 auto}
-(.hrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.hrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .logo{display:flex;align-items:center;gap:11px}
 .logo .ic{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--teal1),var(--teal2));
   display:flex;align-items:center;justify-content:center;font-size:17px;box-shadow:0 6px 18px -4px rgba(13,115,144,.6)}
@@ -64,19 +64,7 @@ textarea:focus,input:focus,select:focus{outline:none}
 
 /* tab pills */
 .rowwrap{display:flex;justify-content:center;padding-bottom:14px}
-+
-+/* Key Input HTML */
-+<div id="keyBar" class="keyBar" style="display:none">
-+  <span class="lbl">🔑 OpenRouter Key:</span>
-+  <input id="openkey" type="password" placeholder="o...re...y...">
-+  <div class="btngrp">
-+    <button id="clearKeyBtn" class="b">✕</button>
-+    <button id="saveKeyBtn" class="b">✅</button>
-+  </div>
-+</div>
-+
-/* tab pills */
-.tabs{display:flex;gap:4px;background:rgba(0,0,0,.2);border:1px solid var(--line);border-radius:13px;padding:4px;width:max-content;max-width:100%;overflow-x:auto}
+.tabs{display:flex;
 .tab{position:relative;overflow:hidden;z-index:0;background:none;border:none;cursor:pointer;padding:8px 16px;font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mut2);border-radius:9px;transition:.22s;white-space:nowrap;font-family:'DM Mono',monospace}
 .tab span{position:relative;z-index:2}
 .tab.on{color:#06222c;box-shadow:0 6px 16px -6px var(--aqua)}
@@ -241,7 +229,16 @@ textarea:focus,input:focus,select:focus{outline:none}
     <div class="tabwrap"><div class="tabs" id="tabs"></div></div>
   </div></div>
 
-  <div class="body" id="body"></div>
+    <div id="keyBar" class="keyBar" style="display:none">
+      <span class="lbl">🔑 OpenRouter Key:</span>
+      <input id="openkey" type="password" placeholder="o...re...y...">
+      <div class="btngrp">
+        <button id="clearKeyBtn" class="b">✕</button>
+        <button id="saveKeyBtn" class="b">✅</button>
+      </div>
+    </div>
+
+    <div class="body" id="body"></div>
 
   <div class="inbar" id="inbar">
     <div class="inbarin" style="flex-direction:column;align-items:stretch">
@@ -2513,6 +2510,9 @@ function renderAttachPreview(){
 
 /* ── Event wiring ── */
 $('keyBar').style.display='flex'
+// Pre-populate saved key
+const savedKey = localStorage.getItem('openrouter_key');
+if (savedKey) $('openkey').value = savedKey;
 $('saveKeyBtn').onclick=()=>{
   const k=$('openkey').value.trim();
   if(!k||k.length<10){
