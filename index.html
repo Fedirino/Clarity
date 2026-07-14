@@ -45,13 +45,6 @@ textarea:focus,input:focus,select:focus{outline:none}
 .hd{padding:max(16px,env(safe-area-inset-top)) 20px 0;flex-shrink:0;
   background:linear-gradient(180deg,rgba(8,20,32,.9),transparent);
   border-bottom:1px solid var(--line);backdrop-filter:blur(10px)}
-.keyBar{display:flex;align-items:center;justify-content:space-between;margin:10px 14px 4px;padding:8px 12px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;transition:0.25s}
-.keyBar .lbl{font-size:11px;color:var(--mut);font-family:'DM Mono',monospace;margin-right:8px}
-.keyBar input{width:200px;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:4px;padding:5px 8px;color:var(--txt);font-size:12px;font-family:'DM Mono',monospace;transition:0.2s}
-.keyBar input:focus{border-color:var(--aqua);outline:none}
-.keyBar .btngrp{display:flex;gap:6px}
-.keyBar .btngrp .b{font-size:10px;padding:6px 9px;border-radius:4px;border:none;cursor:pointer;transition:0.2s;font-family:'DM Mono',monospace}
-.keyBar .btngrp .b:hover{filter:brightness(1.15)}
 .hdin{max-width:660px;margin:0 auto}
 .hrow{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .logo{display:flex;align-items:center;gap:11px}
@@ -228,15 +221,6 @@ textarea:focus,input:focus,select:focus{outline:none}
     <div id="setup" style="display:none"></div>
     <div class="tabwrap"><div class="tabs" id="tabs"></div></div>
   </div></div>
-
-    <div id="keyBar" class="keyBar" style="display:none">
-      <span class="lbl">🔑 OpenRouter Key:</span>
-      <input id="openkey" type="password" placeholder="o...re...y...">
-      <div class="btngrp">
-        <button id="clearKeyBtn" class="b">✕</button>
-        <button id="saveKeyBtn" class="b">✅</button>
-      </div>
-    </div>
 
     <div class="body" id="body"></div>
 
@@ -623,7 +607,17 @@ function renderSetup(){
         <div class="hint">Clarity will notify you automatically at ${S.notifyTime||'10:00'} on the day a task is due.</div>
       </div>
 
-      <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
+            <div style="margin-top:16px">
+              <div class="lab">🔑 OpenRouter Key <span style="color:var(--mut2);text-transform:none;letter-spacing:0">(for GPT-4o strip scanning)</span></div>
+              <div style="display:flex;gap:6px;align-items:center">
+                <input id="setupOpenKey" type="password" value="${localStorage.getItem('openrouter_key')||''}" placeholder="sk-or-v1-..." style="flex:1;background:rgba(0,0,0,.28);border:1px solid var(--line);border-radius:11px;padding:8px 10px;color:var(--txt);font-size:12px;font-family:'DM Mono',monospace">
+                <button onclick="localStorage.setItem('openrouter_key',$('setupOpenKey').value.trim());alert('✅ Key saved.')" style="background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--green);font-size:14px;padding:6px 12px;cursor:pointer">💾</button>
+                <button onclick="localStorage.removeItem('openrouter_key');$('setupOpenKey').value='';alert('✅ Key cleared.')" style="background:var(--panel2);border:1px solid var(--line);border-radius:8px;color:var(--coral);font-size:14px;padding:6px 12px;cursor:pointer">✕</button>
+              </div>
+              <div class="hint">Without a key, Clarity falls back to the built-in model. Saved automatically.</div>
+            </div>
+
+            <div style="margin-top:16px;display:flex;justify-content:space-between;align-items:center">
         <button onclick="fbAuth.signOut()" style="background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--mut);font-size:11px;font-family:inherit;padding:7px 14px;border-radius:9px;cursor:pointer">Sign out</button>
         <span style="font-size:9px;color:var(--mut2);font-family:'DM Mono',monospace;text-align:right;letter-spacing:1px">Clarity v4.4.0</span>
       </div>
@@ -2509,24 +2503,6 @@ function renderAttachPreview(){
 }
 
 /* ── Event wiring ── */
-$('keyBar').style.display='flex'
-// Pre-populate saved key
-const savedKey = localStorage.getItem('openrouter_key');
-if (savedKey) $('openkey').value = savedKey;
-$('saveKeyBtn').onclick=()=>{
-  const k=$('openkey').value.trim();
-  if(!k||k.length<10){
-    alert('Key too short. Enter valid OpenRouter key.');
-    return
-  }
-  localStorage.setItem('openrouter_key',k);
-  alert('✅ Key saved. Refresh to use GPT-4o.');
-};
-$('clearKeyBtn').onclick=()=>{
-  localStorage.removeItem('openrouter_key');
-  $('openkey').value='';
-  alert('✅ Key cleared.');
-};
 $('gearBtn').onclick=()=>{S.setupOpen=!S.setupOpen;renderSetup()};
 $('sendBtn').onclick=()=>{const v=$('msgIn').value.trim();if(v||S._pendingImage)sendMessage(v)};
 $('msgIn').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();const v=$('msgIn').value.trim();if(v||S._pendingImage)sendMessage(v)}});
