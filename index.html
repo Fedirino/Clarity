@@ -1666,8 +1666,7 @@ function logReading(read){
 
 /* ── MODELS ── */
 const CHAT_MODEL='qwen/qwen3.5-9b'; // Cheap, fast chat model
-const STRIP_MODEL_PRIMARY='gpt-4o'; // Best for strip scanning (vision)
-const STRIP_MODEL_FALLBACK='gpt-4o-mini'; // Cheaper fallback for hard photos
+const STRIP_MODEL_PRIMARY='gpt-4o'; // Strip scanning (vision)
 const STRIP_IMAGE_INSTRUCTION='This is a strip reading. The dipped strip is seated in the channel on the LEFT EDGE of the AquaChek card — the vertical column of real color pads on the far-left side, with arrows pointing right to each parameter row. READ EVERY PAD against the row its arrow points to, and give your best estimate for each WITH an honest confidence percent (0-100%). Pads may be pale/near-white (low free/total chlorine, low CYA) and blend into the white channel — read them anyway and set a lower confidence if unsure; faint is not empty. Do NOT refuse, do NOT ask to confirm the strip is there, do NOT ask for a new photo first — always produce the reading and let the confidence percent carry any uncertainty. Only give no reading if this is not a strip/card photo at all, or it is so blurred/dark you cannot even guess. End with the hidden READINGS block including the confidence object.';
 function qualityToLabel(score){
   if(score>=85) return 'excellent';
@@ -1704,9 +1703,7 @@ function assessImageQuality(canvas){
   return {score,brightness:Math.round(mean),contrast:Math.round(contrast),edge:Math.round(edgeAvg),label:qualityToLabel(score)};
 }
 function pickStripModel(q){
-  if(!q) return STRIP_MODEL_FALLBACK;
-  if(q.score>=60 && q.contrast>=18 && q.edge>=8) return STRIP_MODEL_PRIMARY;
-  return STRIP_MODEL_FALLBACK;
+  return STRIP_MODEL_PRIMARY;
 }
 function qualityPrompt(q){
   if(!q) return '';
