@@ -4,6 +4,51 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [Post-merge] — 2026-07-27
+
+### Changed — OpenRouter migration, GPT-4o strip scanning, serverless cleanup
+
+**Overview**: The app now runs entirely client-side with no server-side proxy.
+Anthropic/Claude replaced by OpenRouter — strip scanning uses GPT-4o, chat uses
+Qwen 3.5 9B. The old Firebase Cloud Function and all Anthropic dependencies
+removed.
+
+### Added
+- **OpenRouter key field** in the gear panel — paste `sk-or-v1-...` to enable
+  API calls.
+- **Anthropic-to-OpenAI body conversion** (`callClaude` now translates the
+  existing Anthropic-format body to OpenAI-compatible format before sending,
+  including `system` → system message and `image.source` → `image_url`).
+
+### Changed
+- **Strip scanning** always uses **GPT-4o** — no mini-model fallback, no
+  quality-based routing. One model, always the best available.
+- **Chat model** switched to **Qwen 3.5 9B** via OpenRouter — fast and cheap
+  for day-to-day pool conversation.
+- **Firebase Cloud Function removed** — the Anthropic proxy (`/api/claude`
+  rewrite → 2nd gen function) is gone. The app talks to OpenRouter directly
+  from the browser.
+- **API key routing** — OpenRouter key hidden from header bar, moved to the
+  gear panel under a dedicated "🔑 OpenRouter Key" section.
+
+### Removed
+- `functions/` directory — the `claude` Cloud Function and all its
+  dependencies (package.json, `.env`, Firestore rewrite).
+- All Anthropic/Claude references — the app no longer sends requests to the
+  Anthropic API.
+- Strip model fallback logic (`pickStripModel` now returns `STRIP_MODEL_PRIMARY`
+  unconditionally).
+
+### Housekeeping
+- Removed stale archived versions (`old-v*.html`) — git history is the real
+  archive.
+- Removed legacy `netlify/` directory + `netlify.toml` (pre-Firebase era).
+- Removed `logo-options/` design explorations (finalized icon in use).
+- Removed `FIREBASE-SETUP.md` — setup guide for the retired Cloud Function.
+- Updated README to reflect current OpenRouter-based stack.
+
+---
+
 ## [4.7.0] — 2026-07-07
 
 ### Changed — finalized brand icon: "Minimal Monoline" droplet — Minor Release
