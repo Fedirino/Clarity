@@ -2332,7 +2332,7 @@ async function callClaude(body){
   try{data=JSON.parse(text);}catch(e){throw new Error('OpenRouter returned non-JSON: '+text.slice(0,200));}
   if(data.error)throw new Error(data.error.message||JSON.stringify(data.error));
   if(!data.choices||!data.choices[0])throw new Error('No content from OpenRouter.');
-  return data.choices[0].message.content.trim();
+  return (data.choices[0].message?.content || '').trim();
 }
 
 async function sendMessage(text){
