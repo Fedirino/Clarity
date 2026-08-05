@@ -4,6 +4,14 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [v4.4.1] — 2026-08-05
+
+### Fixed
+
+- **Crash on null content response**: OpenRouter models (especially reasoning/thinking models) can return `content: null` in the response. `callClaude()` now handles this gracefully with optional chaining and a fallback to empty string, fixing "Cannot read properties of null (reading 'trim')".
+
+---
+
 ## [Post-merge] — 2026-07-27
 
 ### Changed — OpenRouter migration, GPT-4o strip scanning, serverless cleanup
