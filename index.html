@@ -195,6 +195,9 @@ textarea:focus,input:focus,select:focus{outline:none}
 .rcard-param .rp-badge{display:inline-block;font-size:8px;padding:2px 7px;border-radius:4px;letter-spacing:1px;font-family:'DM Mono',monospace;font-weight:600}
 .rcard-param .rp-conf{font-size:9px;margin-top:3px;font-family:'DM Mono',monospace;letter-spacing:.5px;opacity:.85}
 .rcard-conf-note{font-size:10.5px;color:var(--mut);line-height:1.45;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 11px;margin-bottom:10px}
+.rcard-xcheck{font-size:10px;color:var(--aqua);line-height:1.4;background:rgba(92,200,160,.08);border:1px solid rgba(92,200,160,.22);border-radius:10px;padding:7px 11px;margin-bottom:10px;font-family:'DM Mono',monospace;letter-spacing:.3px}
+.rcard-xcheck b{font-weight:700;color:#f0c040}
+.rp-dispute{font-size:9.5px;color:#f0c040;margin-top:3px;font-family:'DM Mono',monospace;letter-spacing:.3px;cursor:help}
 .rcard-dose{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px;margin-bottom:8px}
 .rcard-dose .rd-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px}
 .rcard-dose .rd-name{font-size:12.5px;font-weight:600}
@@ -692,9 +695,77 @@ function parseReadings(text){
     if(data.confidence)delete data.confidence;
     return{clean,readings:data,confidence};
   }catch(e){return null;}
-}
+  }
 
-/* ── Phase 3 (v4.0): the action set. Clarity PROPOSES writes in a hidden block;
+  /* ── Cross-model verification (v4.x): when the primary scan is low-confidence,
+     a DIFFERENT-family model audits the SAME photo so failure modes don't overlap.
+     It does NOT re-read the strip — it reports only disagreements. Primary readings
+     are never silently overwritten: disputed pads surface BOTH readings + confidences
+     and the owner decides. Runs client-side through the same OpenRouter path. ── */
+  function lowestConfidence(conf){
+    if(!conf)return null;
+    const vals=KEYS.map(k=>conf[k]!=null?conf[k]:null).filter(x=>x!=null);
+    return vals.length?Math.min(...vals):null;
+  }
+  function buildAuditPrompt(reads,conf){
+    const lines=KEYS.map(k=>
+      `  ${IDEAL[k].short} (key:${k}): ${reads[k]!=null?reads[k]:'not read'}${conf&&conf[k]!=null?'   @ '+conf[k]+'% confidence':''}`);
+    return `You are AUDITING another model's pool test-strip reading. A primary model already read this photo; its per-pad values and confidence percentages are below.
+
+  DO NOT redo the whole reading. Look at the SAME photo and ONLY AUDIT: for each pad where you DISAGREE with the primary reading (your estimate differs, or its confidence is low and you can genuinely do better), report it. For every other pad the primary reading stands — do not repeat verified values.
+
+  PRIMARY READING (AquaChek card, pads on the LEFT EDGE, each arrowed to its row):
+  ${lines.join('\n')}
+
+  Report ONLY disagreements, each as: pad name (short label), your reading, your confidence (0-100%). Do not comment on the rest of the card. Keep it honest — uncertainty is a number, never fake precision: if a pad is too pale/blurred/dark to judge, give a low confidence rather than inventing a precise value.
+
+  If the shown values are already correct, just say "I agree with the primary reading for all pads" and output the block with an empty object.
+  If this photo is not a test strip at all, say exactly that and output the block with an empty object.
+
+  End your message with a hidden block — formatted EXACTLY as:
+  <!--DISPUTES:{"<key>": {"value": <your reading>, "confidence": <0-100>}, ...}-->
+  with <key> using ONLY these keys: FC=chlorine, TC=totalChlorine, pH=ph, Alk=alkalinity, Hard=hardness, CYA=cyanuric. Empty object when you have no disagreements.`;
+  }
+  function parseDisputes(text){
+    const m=text&&text.match(/<!--DISPUTES:(.*?)-->/s);
+    if(!m)return null;
+    try{
+      const d=JSON.parse(m[1]);
+      const out={};
+      for(const k of Object.keys(d||{})){
+        if(!KEYS.includes(k))continue;
+        const e=d[k]||{};
+        const value=Number(e.value),conf=Number(e.confidence);
+        if(Number.isFinite(value)&&Number.isFinite(conf)&&conf>=0&&conf<=100)out[k]={value,confidence:Math.round(conf)};
+      }
+      return Object.keys(out).length?out:{};
+    }catch(e){return null;}
+  }
+  function buildVerification(disputes,reads,conf){
+    const flat=KEYS.map(k=>disputes[k]?{key:k,value:disputes[k].value,confidence:disputes[k].confidence}:null).filter(Boolean);
+    return {
+      ran:true,
+      model:STRIP_MODEL_VERIFIER,
+      disputed:flat.map(d=>({
+        key:d.key,
+        primary:{value:reads[d.key]!=null?reads[d.key]:null,confidence:conf&&conf[d.key]!=null?conf[d.key]:null},
+        verifier:{value:d.value,confidence:d.confidence}
+      }))
+    };
+  }
+  async function runVerifier(parsed,imageData){
+    const audit=buildAuditPrompt(parsed.readings,parsed.confidence);
+    const messages=[{role:'user',content:[
+      {type:'text',text:audit},
+      {type:'image',source:{type:'base64',media_type:imageData.mediaType,data:imageData.base64}}
+    ]}];
+    const reply=await callClaude({model:STRIP_MODEL_VERIFIER,max_tokens:900,system:`You are a precise auditor for a pool-maintenance assistant. You never invent values. Audit only, report only disagreements, and always end with the hidden DISPUTES block.`,messages},{skipCooldown:true});
+    const disputes=parseDisputes(reply);
+    if(disputes==null)return{ran:false,model:STRIP_MODEL_VERIFIER,note:'verifier reply not parseable'};
+    return buildVerification(disputes,parsed.readings,parsed.confidence);
+  }
+
+  /* ── Phase 3 (v4.0): the action set. Clarity PROPOSES writes in a hidden block;
    nothing is saved without the owner's confirm tap (a ✓ chip). The app — never the
    model — performs the write and shows exactly what was done. Reads stay in context;
    these are the bookkeeping actions Clarity can do FOR you. ── */
@@ -781,10 +852,15 @@ function runAction(a){
   return 'Unknown action';
 }
 
-function renderResultsCard(readings,msgIdx,confidence){
+function renderResultsCard(readings,msgIdx,confidence,verify){
   const doses=doseAdvice(readings,S.gallons);
   const saved=S._savedMsgs&&S._savedMsgs.has(msgIdx);
   let h=`<div class="rcard"><div class="rcard-hdr"><span class="rcard-icon">📊</span><span class="rcard-title">Test Strip Results</span></div>`;
+  if(verify&&verify.ran){
+    const n=(verify.disputed||[]).length;
+    const model=(verify.model||'').split('/').pop();
+    h+=`<div class="rcard-xcheck">🔀 Cross-checked${n?` · <b>${n} pad${n>1?'s':''} disputed</b>`:' · no disagreements'}<span style="opacity:.55">${esc(model)}</span></div>`;
+  }
   h+=`<div class="rcard-grid">`;
   KEYS.forEach(k=>{
     const v=readings[k];
@@ -795,11 +871,17 @@ function renderResultsCard(readings,msgIdx,confidence){
     h+=`<div class="rp-value" style="color:${v!=null?c:'rgba(255,255,255,.15)'}">${v!=null?v:'—'}</div>`;
     if(st)h+=`<span class="rp-badge" style="color:${stColor};background:${stColor}1a">${st}</span>`;
     const cf=confidence&&confidence[k]!=null?confidence[k]:null;
-    if(cf!=null){
-      const cfColor=cf>=70?'var(--green)':cf>=45?'var(--coral)':'var(--mut2)';
-      h+=`<div class="rp-conf" style="color:${cfColor}" title="Clarity's confidence in this reading">${cf}%</div>`;
-    }
-    h+=`${gaugeHTML(v,k)}</div>`;
+        if(cf!=null){
+          const cfColor=cf>=70?'var(--green)':cf>=45?'var(--coral)':'var(--mut2)';
+          h+=`<div class="rp-conf" style="color:${cfColor}" title="Clarity's confidence in this reading">${cf}%</div>`;
+        }
+        const dis=verify&&verify.disputed?verify.disputed.find(x=>x.key===k):null;
+        if(dis){
+          const dv=dis.verifier&&dis.verifier.value!=null?dis.verifier.value:null;
+          const dc=dis.verifier&&dis.verifier.confidence!=null?dis.verifier.confidence:null;
+          h+=`<div class="rp-dispute" title="Primary (${dis.primary&&dis.primary.value!=null?dis.primary.value:'—'}${dis.primary&&dis.primary.confidence!=null?' @ '+dis.primary.confidence+'%':''}) vs ${esc((verify.model||'').split('/').pop())} audit — you decide which is right.">↔ ${dv!=null?dv:'—'}${dc!=null?' ('+dc+'%)':''} <span style="opacity:.6">audit</span></div>`;
+        }
+        h+=`${gaugeHTML(v,k)}</div>`;
   });
   h+=`</div>`;
   if(confidence){
@@ -1245,7 +1327,7 @@ function renderChat(b){
       if(parsed){
         displayText=parsed.clean;
         m._readings=parsed.readings;
-        cardHtml=renderResultsCard(parsed.readings,idx,parsed.confidence);
+        cardHtml=renderResultsCard(parsed.readings,idx,parsed.confidence,m._verify||null);
       }
       const aParsed=parseActions(displayText);
       if(aParsed){displayText=aParsed.clean;m._actions=aParsed.actions;}
@@ -1667,6 +1749,8 @@ function logReading(read){
 /* ── MODELS ── */
 const CHAT_MODEL='qwen/qwen3.5-9b'; // Cheap, fast chat model
 const STRIP_MODEL_PRIMARY='gpt-4o'; // Strip scanning (vision)
+const STRIP_VERIFY_THRESHOLD=70;    // If the primary scan's lowest per-pad confidence drops below this (%), a DIFFERENT-family model audits the same photo. Tunable; above it the scan stays single-call.
+const STRIP_MODEL_VERIFIER='google/gemini-3.1-pro-preview'; // Audit model — a different family than STRIP_MODEL_PRIMARY so failure modes don't overlap. Alternative: 'anthropic/claude-opus-4.8'.
 const STRIP_IMAGE_INSTRUCTION='This is a strip reading. The dipped strip is seated in the channel on the LEFT EDGE of the AquaChek card — the vertical column of real color pads on the far-left side, with arrows pointing right to each parameter row. READ EVERY PAD against the row its arrow points to, and give your best estimate for each WITH an honest confidence percent (0-100%). Pads may be pale/near-white (low free/total chlorine, low CYA) and blend into the white channel — read them anyway and set a lower confidence if unsure; faint is not empty. Do NOT refuse, do NOT ask to confirm the strip is there, do NOT ask for a new photo first — always produce the reading and let the confidence percent carry any uncertainty. Only give no reading if this is not a strip/card photo at all, or it is so blurred/dark you cannot even guess. End with the hidden READINGS block including the confidence object.';
 function qualityToLabel(score){
   if(score>=85) return 'excellent';
@@ -2290,9 +2374,10 @@ function checkUsage(){
   usage.count++;store.set('usage',usage);
 }
 
-async function callClaude(body){
+async function callClaude(body,opts={}){
   const now=Date.now();
-  if(now-lastCallTime<COOLDOWN_MS)throw new Error('Please wait a moment before sending another message.');
+  // The verifier (cross-model audit) runs back-to-back with the primary scan within one atomic action, so it skips the inter-message cooldown but still counts toward the daily usage limit.
+  if(!opts.skipCooldown&&now-lastCallTime<COOLDOWN_MS)throw new Error('Please wait a moment before sending another message.');
   lastCallTime=now;
   checkUsage();
   const openrouterKey = localStorage.getItem('openrouter_key');
@@ -2435,7 +2520,24 @@ async function sendMessage(text){
       system:systemPrompt+`\nUser's pool: inground, ~${S.gallons.toLocaleString()} gallons.`+profileCtx+notesCtx+weatherCtx+modelCtx+insightsCtx+historyCtx+stripCtx,messages:api});
     S.messages.push({role:'assistant',content:reply});
 
-  }catch(e){S.messages.push({role:'assistant',content:`⚠ ${e.message}`});}
+        // Cross-model verification: if this was a strip scan and its lowest per-pad
+        // confidence is below the threshold, have a DIFFERENT-family model audit the
+        // SAME photo. It only reports disagreements; primary readings are never silently
+        // overwritten (disputed pads surface BOTH readings for the owner to decide).
+        // Best-effort — a verifier failure must never fail the primary result.
+        if(hasImage&&imageData){
+          try{
+            const parsed=parseReadings(reply);
+            const low=parsed?lowestConfidence(parsed.confidence):null;
+            if(low!=null&&low<STRIP_VERIFY_THRESHOLD){
+              const verify=await runVerifier(parsed,imageData);
+              const msg=S.messages[S.messages.length-1];
+              if(verify&&verify.ran){msg._verify=verify;}
+            }
+          }catch(ve){console.warn('[Clarity] Verifier skipped:',ve&&ve.message);}
+        }
+
+      }catch(e){S.messages.push({role:'assistant',content:`⚠ ${e.message}`});}
   S.thinking=false;render();
 }
 

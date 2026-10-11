@@ -67,6 +67,21 @@ Clarity isn't just an AI feature — it uses agentic patterns throughout:
 - **Honest uncertainty** — every reading and belief carries a confidence %.
   When there isn't enough data, Clarity says what it still needs instead of
   guessing. Uncertainty is a number, never fake precision.
+- **Strip scanning** — every pad is read via GPT-4o vision with a per-pad
+  confidence %. Single call, one model, cheapest path.
+- **Threshold-gated cross-model verification** — if a scan's lowest per-pad
+  confidence drops below `STRIP_VERIFY_THRESHOLD` (default 70%), Clarity sends the
+  *same photo* to a **different-model-family** auditor (`STRIP_MODEL_VERIFIER`,
+  default `google/gemini-3.1-pro-preview`) over the same client-side OpenRouter
+  path. The auditor does **not** re-read the strip — it reports only disagreements,
+  each with its own reading and confidence (and a low confidence when a pad is too
+  pale/blurred to judge, never fake precision). Above the threshold the flow is
+  unchanged: one call, same cost. The verifier is best-effort — a failure never
+  fails the primary scan.
+- **Disputes are surfaced, never silently overwritten.** For each disputed pad the
+  results card shows *both* readings with *both* confidences, flagged for the owner
+  to decide; a "🔀 Cross-checked · N pads disputed" indicator appears whenever the
+  audit ran. No model ever silently edits another model's number.
 
 ---
 

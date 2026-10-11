@@ -4,6 +4,22 @@ All notable changes to Clarity — Pool Assistant.
 
 ---
 
+## [Unreleased]
+
+### Added
+- **Threshold-gated cross-model verification** — when a strip scan's lowest per-pad
+  confidence drops below `STRIP_VERIFY_THRESHOLD` (default 70), the *same photo* is
+  audited by a **different-model-family** verifier (`STRIP_MODEL_VERIFIER`, default
+  `google/gemini-3.1-pro-preview`) through the existing client-side OpenRouter path
+  (`callClaude`, skipping the inter-message cooldown but still counting toward the
+  daily limit). The verifier reports **only disagreements**; disputed pads surface
+  **both** readings + confidences on the results card — never silently overwritten —
+  with a "🔀 Cross-checked · N pads disputed" indicator. Above the threshold the flow
+  is unchanged (single call, same cost). Both knobs are named constants, and a
+  verifier failure never fails the primary scan.
+
+---
+
 ## [v4.4.1] — 2026-08-05
 
 ### Fixed
