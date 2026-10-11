@@ -52,6 +52,24 @@ OpenRouter directly from the client. There is no server-side function.
 
 ---
 
+## Agent patterns
+
+Clarity isn't just an AI feature — it uses agentic patterns throughout:
+
+- **Propose and confirm (human-in-the-loop)** — the chat's agent layer can
+  propose bookkeeping actions (log a dose, add a reminder…), but nothing is
+  saved until you tap ✓. The agent suggests multi-step actions; the human
+  approves each one.
+- **Forecast, verify, adjust** — the pool model learns your FC decay rate, pH
+  drift, and testing rhythm, makes chlorine forecasts, then checks its own
+  predictions against your next real test. Hits and misses are shown, and
+  misses lower confidence. The system evaluates itself against ground truth.
+- **Honest uncertainty** — every reading and belief carries a confidence %.
+  When there isn't enough data, Clarity says what it still needs instead of
+  guessing. Uncertainty is a number, never fake precision.
+
+---
+
 ## Deploy
 
 Hosting auto-deploys on every push to `main` via GitHub Actions
